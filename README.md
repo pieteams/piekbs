@@ -2,6 +2,7 @@
   <img src="docs/readme/logo.png" width="128" alt="WikiLoop"><br>
   <h1>WikiLoop</h1>
   <p>Agent-native LLM Wiki (Karpathy-style) RAG: distill raw docs → structured Markdown wiki → hybrid search via MCP</p>
+  <p><a href="docs/readme/README.zh-CN.md">中文文档</a></p>
 </div>
 
 WikiLoop is a local-first LLM Wiki knowledge base for agents. It is designed to help agents and humans maintain sourced, reviewable, Markdown-based knowledge from local raw materials.
