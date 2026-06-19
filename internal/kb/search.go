@@ -12,6 +12,7 @@ import (
 // SearchResult holds a single result from FTS or hybrid search.
 type SearchResult struct {
 	ID           string  `json:"id"`
+	DocID        string  `json:"doc_id,omitempty"` // parent doc ID when result is a chunk
 	Path         string  `json:"path"`
 	Layer        string  `json:"layer"`
 	Kind         string  `json:"kind"`

@@ -65,6 +65,13 @@ func (v *VecStore) Delete(docIDs []string) error {
 	return v.coll.Delete(context.Background(), nil, nil, docIDs...)
 }
 
+// DeleteDoc removes all chunk vectors for a document by filtering on the
+// "doc_id" metadata key. Called when a document is re-embedded or purged.
+func (v *VecStore) DeleteDoc(docID string) error {
+	return v.coll.Delete(context.Background(),
+		map[string]string{"doc_id": docID}, nil)
+}
+
 // Count returns the number of stored vectors.
 func (v *VecStore) Count() int { return v.coll.Count() }
 
@@ -89,6 +96,7 @@ func (v *VecStore) Query(queryVec []float32, layer *string, limit int) ([]Search
 	for _, r := range res {
 		out = append(out, SearchResult{
 			ID:          r.ID,
+			DocID:       r.Metadata["doc_id"],
 			Path:        r.Metadata["path"],
 			Layer:       r.Metadata["layer"],
 			Kind:        r.Metadata["kind"],
