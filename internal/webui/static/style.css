@@ -1,0 +1,253 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    color: #333;
+    background: #f5f5f5;
+    min-height: 100vh;
+}
+
+nav {
+    background: #1a1a2e;
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    height: 48px;
+}
+
+nav .brand {
+    color: #e0e0ff;
+    font-weight: 700;
+    font-size: 16px;
+    text-decoration: none;
+    margin-right: auto;
+}
+
+nav a {
+    color: #aab;
+    text-decoration: none;
+    font-size: 13px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.15s;
+}
+
+nav a:hover,
+nav a.active {
+    color: #fff;
+    background: rgba(255,255,255,0.1);
+}
+
+.container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.card h2 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #222;
+}
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 0.75rem;
+    background: #f9f9fb;
+    border-radius: 6px;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #3b5bdb;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+}
+
+.search-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.search-row input[type="text"] {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+}
+
+.search-row input[type="text"]:focus {
+    border-color: #3b5bdb;
+}
+
+button {
+    padding: 8px 16px;
+    background: #3b5bdb;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.15s;
+}
+
+button:hover {
+    background: #2f4cc0;
+}
+
+.results-list {
+    list-style: none;
+    margin-top: 0.75rem;
+}
+
+.results-list li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.results-list li:last-child {
+    border-bottom: none;
+}
+
+.result-title {
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.result-meta {
+    font-size: 12px;
+    color: #888;
+    margin: 2px 0;
+}
+
+.result-snippet {
+    font-size: 13px;
+    color: #555;
+    margin-top: 4px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-right: 4px;
+}
+
+.badge-wiki   { background: #d0ebff; color: #1864ab; }
+.badge-raw    { background: #fff3bf; color: #7d5a00; }
+.badge-schema { background: #d3f9d8; color: #1b5e20; }
+
+.files-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.files-table th {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 2px solid #eee;
+    color: #555;
+    font-weight: 600;
+}
+
+.files-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+    height: 36px;
+    line-height: 1.4;
+}
+
+.files-table tr:last-child td {
+    border-bottom: none;
+}
+
+.settings-kv {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 0.5rem 1rem;
+    align-items: center;
+}
+
+.settings-kv .key {
+    font-weight: 500;
+    color: #555;
+    font-size: 13px;
+}
+
+.settings-kv .val {
+    font-family: monospace;
+    font-size: 13px;
+    color: #222;
+    word-break: break-all;
+}
+
+.empty {
+    text-align: center;
+    color: #aaa;
+    padding: 1.5rem 0;
+    font-style: italic;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.pagination button {
+    padding: 5px 12px;
+    font-size: 12px;
+}
+
+.pagination button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.pagination #page-info {
+    font-size: 13px;
+    color: #666;
+}
+
+.error {
+    color: #c0392b;
+    font-size: 13px;
+    margin-top: 0.5rem;
+}

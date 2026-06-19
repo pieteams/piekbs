@@ -1,0 +1,49 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependencies
+node_modules/
+.venv/
+venv/
+
+# Build and cache
+__pycache__/
+*.pyc
+*.egg-info/
+.cache/
+dist/
+build/
+*.log
+
+# Local env
+.env
+.env.*
+
+# SDD (subagent-driven development) working files
+.sdd/
+
+# Claude Code local settings
+.claude/
+
+# Build dependency cache (libtokenizers, ORT — downloaded at build time)
+lib/
+
+# Git LFS hooks (no longer used)
+.githooks/
+
+# Backup directories
+git.bak/
+
+# Embedding models (downloaded separately, not committed)
+internal/embed/models/
+
+# WikiLoop generated indexes
+**/index/*.sqlite
+**/index/*.sqlite-*
