@@ -5,7 +5,8 @@
 #   ./scripts/build.sh [version] [target...]
 #
 # Targets:
-#   darwin-arm64   → WikiLoop.app + .dmg  (requires macOS)
+#   darwin-arm64   → WikiLoop.app + .dmg  (requires macOS Apple Silicon)
+#   darwin-amd64   → WikiLoop.app + .dmg  (requires macOS Intel)
 #   linux-amd64    → tar.gz with binary only (models downloaded separately)
 #   linux-arm64    → tar.gz with binary only (models downloaded separately)
 #   all            → all of the above (default)
@@ -166,6 +167,76 @@ build_darwin_arm64() {
     fi
 }
 
+# ── macOS Intel .app + dmg ───────────────────────────────────────────────────
+
+build_darwin_amd64() {
+    echo "→ building darwin-amd64 (.app + dmg) ..."
+
+    local app_dir="$OUTDIR/WikiLoop-amd64.app"
+    local lib_suffix="darwin-amd64"
+    ensure_lib "libtokenizers.darwin-x86_64" "$lib_suffix"
+    local libpath
+    libpath="$(pwd)/$LIBDIR/$lib_suffix"
+
+    mkdir -p "$app_dir/Contents/MacOS"
+    CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 \
+        CGO_LDFLAGS="-L${libpath}" \
+        go build -tags fts5 \
+        -ldflags "-s -w -X main.Version=${VERSION}" \
+        -o "$app_dir/Contents/MacOS/wikiloop" \
+        ./cmd/wikiloop/ 2>/dev/null
+
+    mkdir -p "$app_dir/Contents"
+    sed "s/1.0.0/${VERSION}/g" scripts/Info.plist > "$app_dir/Contents/Info.plist"
+
+    mkdir -p "$app_dir/Contents/Resources/web"
+    cp -r internal/webui/static/* "$app_dir/Contents/Resources/web/"
+
+    ensure_ort "osx-x86_64"
+    local ort_dylib="$LIBDIR/ort-osx-x86_64/libonnxruntime.dylib"
+    if [ -f "$ort_dylib" ]; then
+        mkdir -p "$app_dir/Contents/Frameworks"
+        cp "$ort_dylib" "$app_dir/Contents/Frameworks/libonnxruntime.dylib"
+        install_name_tool -id "@rpath/libonnxruntime.dylib" \
+            "$app_dir/Contents/Frameworks/libonnxruntime.dylib" 2>/dev/null || true
+        install_name_tool -add_rpath "@executable_path/../Frameworks" \
+            "$app_dir/Contents/MacOS/wikiloop" 2>/dev/null || true
+        echo "  ✓ bundled libonnxruntime.dylib → Contents/Frameworks/"
+    else
+        echo "  ⚠ libonnxruntime not found — ONNX will require brew install onnxruntime"
+    fi
+
+    [ -f "scripts/wikiloop.icns" ] && cp scripts/wikiloop.icns "$app_dir/Contents/Resources/wikiloop.icns"
+
+    codesign --force --deep --sign - "$app_dir" >/dev/null 2>&1 || true
+    xattr -cr "$app_dir" 2>/dev/null || true
+
+    local app_size
+    app_size=$(du -sh "$app_dir" | cut -f1)
+    echo "  ✓ $app_dir ($app_size)"
+
+    if command -v create-dmg &>/dev/null; then
+        local dmg="$OUTDIR/WikiLoop-${VERSION}-darwin-amd64.dmg"
+        create-dmg \
+            --volname "WikiLoop ${VERSION}" \
+            --volicon "scripts/wikiloop.icns" \
+            --background "scripts/dmg-background.png" \
+            --window-pos 200 100 \
+            --window-size 660 380 \
+            --icon-size 100 \
+            --icon "WikiLoop-amd64.app" 495 140 \
+            --app-drop-link 165 140 \
+            "$dmg" "$app_dir" >/dev/null 2>&1 || true
+        if [ -f "$dmg" ]; then
+            echo "  ✓ $dmg ($(du -sh "$dmg" | cut -f1))"
+        else
+            echo "  ✗ dmg creation failed"
+        fi
+    else
+        echo "  ℹ  skipping dmg (install: brew install create-dmg)"
+    fi
+}
+
 # ── Linux tar.gz ──────────────────────────────────────────────────────────────
 
 build_linux() {
@@ -220,6 +291,7 @@ echo "Building wikiloop v${VERSION}"
 echo
 
 want "darwin-arm64" && build_darwin_arm64
+want "darwin-amd64" && build_darwin_amd64
 want "linux-amd64"  && build_linux amd64 x86_64-linux-musl-gcc  libtokenizers.linux-musl-amd64 linux-amd64
 want "linux-arm64"  && build_linux arm64 aarch64-linux-musl-gcc libtokenizers.linux-musl-arm64 linux-arm64
 

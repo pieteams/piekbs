@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-arm64:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,8 +29,66 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
-      - name: Build all platforms
-        run: ./scripts/build.sh ${{ steps.version.outputs.VERSION }}
+      - name: Build darwin-arm64 + linux
+        run: ./scripts/build.sh ${{ steps.version.outputs.VERSION }} darwin-arm64 linux-amd64 linux-arm64
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-arm64
+          path: |
+            dist/WikiLoop-${{ steps.version.outputs.VERSION }}-darwin-arm64.dmg
+            dist/wikiloop-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz
+            dist/wikiloop-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz
+
+  build-amd64:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install build dependencies
+        run: |
+          brew install onnxruntime
+          brew install create-dmg
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Build darwin-amd64
+        run: ./scripts/build.sh ${{ steps.version.outputs.VERSION }} darwin-amd64
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-amd64
+          path: |
+            dist/WikiLoop-${{ steps.version.outputs.VERSION }}-darwin-amd64.dmg
+
+  release:
+    needs: [build-arm64, build-amd64]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Download arm64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-arm64
+          path: dist/
+
+      - name: Download amd64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-amd64
+          path: dist/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -39,10 +97,13 @@ jobs:
           body: |
             ## Installation
 
-            ### macOS (Apple Silicon)
+            ### macOS Apple Silicon
             1. Download `WikiLoop-${{ steps.version.outputs.VERSION }}-darwin-arm64.dmg`
             2. Open the DMG and drag WikiLoop to Applications
-            3. Download the embedding model (see below) and place in `~/wikiloop-kb/models/bge-small-zh/`
+
+            ### macOS Intel
+            1. Download `WikiLoop-${{ steps.version.outputs.VERSION }}-darwin-amd64.dmg`
+            2. Open the DMG and drag WikiLoop to Applications
 
             ### Linux (x86_64 / ARM64)
             ```bash
@@ -59,6 +120,7 @@ jobs:
             See [README](https://github.com/jasen215/wikiloop#quick-start) for full setup instructions.
           files: |
             dist/WikiLoop-${{ steps.version.outputs.VERSION }}-darwin-arm64.dmg
+            dist/WikiLoop-${{ steps.version.outputs.VERSION }}-darwin-amd64.dmg
             dist/wikiloop-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz
             dist/wikiloop-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz
           draft: false

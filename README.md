@@ -56,6 +56,7 @@ Download the latest release for your platform:
 | Platform | File |
 |---|---|
 | macOS Apple Silicon | `WikiLoop-<version>-darwin-arm64.dmg` |
+| macOS Intel | `WikiLoop-<version>-darwin-amd64.dmg` |
 | Linux x86_64 | `wikiloop-<version>-linux-amd64.tar.gz` |
 | Linux ARM64 | `wikiloop-<version>-linux-arm64.tar.gz` |
 
