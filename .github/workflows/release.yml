@@ -42,7 +42,7 @@ jobs:
             dist/wikiloop-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz
 
   build-amd64:
-    runs-on: macos-13
+    runs-on: macos-15-large
     steps:
       - uses: actions/checkout@v4
 
