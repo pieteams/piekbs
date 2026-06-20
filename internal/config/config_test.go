@@ -7,6 +7,53 @@ import (
 	"time"
 )
 
+func TestLoadSetsDefaultLanguage(t *testing.T) {
+	dir := t.TempDir()
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.UI.Language == "" {
+		t.Error("UI.Language should be set after Load, got empty string")
+	}
+	if cfg.UI.Language != "zh" && cfg.UI.Language != "en" {
+		t.Errorf("UI.Language must be 'zh' or 'en', got %q", cfg.UI.Language)
+	}
+	// Should have been written to config.yaml
+	data, err := os.ReadFile(filepath.Join(dir, "config.yaml"))
+	if err != nil {
+		t.Fatalf("config.yaml not written: %v", err)
+	}
+	if !contains(string(data), "language:") {
+		t.Error("config.yaml should contain language: field")
+	}
+}
+
+func TestLoadReadsExistingLanguage(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("ui:\n  language: \"en\"\n"), 0o644)
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.UI.Language != "en" {
+		t.Errorf("expected en, got %q", cfg.UI.Language)
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsStr(s, substr))
+}
+
+func containsStr(s, sub string) bool {
+	for i := 0; i <= len(s)-len(sub); i++ {
+		if s[i:i+len(sub)] == sub {
+			return true
+		}
+	}
+	return false
+}
+
 func TestLoadConfig_Defaults(t *testing.T) {
 	dir := t.TempDir()
 	cfg, err := Load(dir)

@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -28,6 +30,11 @@ type Config struct {
 	Distill   DistillConfig
 	Embedding EmbeddingConfig
 	Runtime   RuntimeConfig
+	UI        UIConfig
+}
+
+type UIConfig struct {
+	Language string `yaml:"language"` // "en" or "zh"
 }
 
 type RuntimeConfig struct {
@@ -50,6 +57,21 @@ type DistillConfig struct {
 
 type EmbeddingConfig struct {
 	IdleTimeout time.Duration
+}
+
+func detectSystemLanguage() string {
+	for _, env := range []string{"LANG", "LC_ALL", "LANGUAGE"} {
+		if v := os.Getenv(env); strings.HasPrefix(v, "zh") {
+			return "zh"
+		}
+	}
+	if runtime.GOOS == "darwin" {
+		out, err := exec.Command("defaults", "read", "NSGlobalDomain", "AppleLocale").Output()
+		if err == nil && strings.HasPrefix(strings.TrimSpace(string(out)), "zh") {
+			return "zh"
+		}
+	}
+	return "en"
 }
 
 func Load(kbRoot string) (*Config, error) {
@@ -105,6 +127,11 @@ func Load(kbRoot string) (*Config, error) {
 		cfg.Runtime.SqliteVec = v
 	}
 
+	if cfg.UI.Language == "" {
+		cfg.UI.Language = detectSystemLanguage()
+		_ = Save(kbRoot, cfg) // best-effort write; ignore error
+	}
+
 	return cfg, nil
 }
 
@@ -137,6 +164,8 @@ func parseYAML(path string, cfg *Config) error {
 				setEmbeddingField(cfg, key, val)
 			case "runtime":
 				setRuntimeField(cfg, key, val)
+			case "ui":
+				setUIField(cfg, key, val)
 			}
 		} else {
 			key, val := splitKV(trimmed)
@@ -214,6 +243,15 @@ func setRuntimeField(cfg *Config, key, val string) {
 	}
 }
 
+func setUIField(cfg *Config, key, val string) {
+	switch key {
+	case "language":
+		if val == "zh" || val == "en" {
+			cfg.UI.Language = val
+		}
+	}
+}
+
 // Save writes cfg back to <kbRoot>/config.yaml.
 // Only user-facing fields are written (runtime fields are env-var controlled).
 // Values are written unquoted so parseYAML/splitKV can read them back correctly.
@@ -230,6 +268,8 @@ func Save(kbRoot string, cfg *Config) error {
 	fmt.Fprintf(&b, "  api_type: %q\n", cfg.Distill.APIType)
 	b.WriteString("\nembedding:\n")
 	fmt.Fprintf(&b, "  idle_timeout: %q\n", cfg.Embedding.IdleTimeout.String())
+	b.WriteString("\nui:\n")
+	fmt.Fprintf(&b, "  language: %q\n", cfg.UI.Language)
 
 	return os.WriteFile(filepath.Join(kbRoot, "config.yaml"), []byte(b.String()), 0o644)
 }
