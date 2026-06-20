@@ -302,7 +302,13 @@ build_windows_amd64() {
     fi
 
     local bin="$OUTDIR/wikiloop.exe"
+    # Use mingw gcc for CGO on Windows (supports GNU ABI used by libtokenizers.a)
+    local cc="x86_64-w64-mingw32-gcc"
+    if ! command -v "$cc" &>/dev/null; then
+        cc="gcc"  # fallback on Windows runners where mingw is on PATH as gcc
+    fi
     CGO_ENABLED=1 GOOS=windows GOARCH=amd64 \
+        CC="$cc" \
         CGO_LDFLAGS="-L${libpath}" \
         go build -tags fts5 \
         -ldflags "-s -w -X main.Version=${VERSION}" \
