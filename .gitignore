@@ -29,6 +29,9 @@ build/
 # SDD (subagent-driven development) working files
 .sdd/
 
+# Superpowers design docs (local planning, not part of release)
+docs/superpowers/
+
 # Claude Code local settings
 .claude/
 
