@@ -312,7 +312,7 @@ build_windows_amd64() {
         CGO_LDFLAGS="-L${libpath}" \
         go build -tags fts5 \
         -ldflags "-s -w -X main.Version=${VERSION}" \
-        -o "$bin" ./cmd/wikiloop/ 2>/dev/null
+        -o "$bin" ./cmd/wikiloop/
 
     local staging="$OUTDIR/.pkg-windows-amd64"
     local zipfile="$OUTDIR/wikiloop-${VERSION}-windows-amd64.zip"
