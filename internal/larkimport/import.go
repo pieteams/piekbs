@@ -61,9 +61,13 @@ func (CLIRunner) Run(ctx context.Context, args ...string) ([]byte, error) {
 
 // Result describes files created by an import.
 type Result struct {
-	DocumentPath string
-	TablePaths   []string
-	TableRows    []int
+	DocumentPath      string
+	TablePaths        []string
+	TableRows         []int
+	DatasetPath       string
+	TotalRows         int
+	UniqueRows        int
+	DuplicatesRemoved int
 }
 
 type documentResponse struct {
@@ -93,6 +97,12 @@ type tableRef struct {
 	Full      string
 	TableID   string
 	BaseToken string
+}
+
+type importedTable struct {
+	Ref    tableRef
+	Fields []string
+	Rows   [][]interface{}
 }
 
 // Import fetches url using the authenticated lark-cli user identity. The
@@ -132,19 +142,35 @@ func Import(ctx context.Context, kbRoot, url, name string, runner Runner) (*Resu
 
 	content := doc.Data.Document.Content
 	result := &Result{}
+	var tables []importedTable
 	for i, ref := range refs {
 		fields, rows, err := fetchAllRecords(ctx, runner, ref.BaseToken, ref.TableID)
 		if err != nil {
 			return nil, fmt.Errorf("import table %s: %w", ref.TableID, err)
 		}
-		filename := fmt.Sprintf("table-%02d-%s.txt", i+1, safeID(ref.TableID))
+		filename := fmt.Sprintf("table-%02d-%s.snapshot.tsv", i+1, safeID(ref.TableID))
 		if err := os.WriteFile(filepath.Join(stage, filename), renderTableDataset(url, ref, fields, rows), 0o644); err != nil {
-			return nil, fmt.Errorf("write table dataset: %w", err)
+			return nil, fmt.Errorf("write table snapshot: %w", err)
 		}
 		replacement := renderTableReference(filename, ref, fields, len(rows))
 		content = strings.Replace(content, ref.Full, replacement, 1)
 		result.TablePaths = append(result.TablePaths, filepath.ToSlash(filepath.Join("raw", "lark", slug, filename)))
 		result.TableRows = append(result.TableRows, len(rows))
+		result.TotalRows += len(rows)
+		tables = append(tables, importedTable{Ref: ref, Fields: fields, Rows: rows})
+	}
+
+	if len(tables) > 0 {
+		fields, rows := deduplicateTables(tables)
+		datasetName := "records-deduplicated.txt"
+		result.UniqueRows = len(rows)
+		result.DuplicatesRemoved = result.TotalRows - result.UniqueRows
+		result.DatasetPath = filepath.ToSlash(filepath.Join("raw", "lark", slug, datasetName))
+		if err := os.WriteFile(filepath.Join(stage, datasetName),
+			renderDeduplicatedDataset(url, fields, rows, result.TotalRows, result.DuplicatesRemoved), 0o644); err != nil {
+			return nil, fmt.Errorf("write deduplicated dataset: %w", err)
+		}
+		content += renderDatasetSummary(datasetName, result.TotalRows, result.UniqueRows, result.DuplicatesRemoved)
 	}
 
 	document := renderDocument(url, doc.Data.Document.DocumentID, doc.Data.Document.RevisionID, content)
@@ -290,10 +316,22 @@ func renderTableReference(filename string, ref tableRef, fields []string, rowCou
 >
 > - Rows: %d
 > - Fields: %s
-> - Local dataset: [%s](%s)
-> - Availability: Full rows are indexed and searchable by WikiLoop.
+> - Original snapshot: [%s](%s)
+> - Availability: Preserved for audit; WikiLoop indexes the deduplicated dataset below.
 > - Lark table ID: %s
 `, rowCount, strings.Join(fields, ", "), filename, filename, ref.TableID)
+}
+
+func renderDatasetSummary(filename string, total, unique, removed int) string {
+	return fmt.Sprintf(`
+
+# Deduplicated imported records
+
+- Source rows: %d
+- Unique records: %d
+- Duplicate submissions removed: %d
+- Searchable dataset: [%s](%s)
+`, total, unique, removed, filename, filename)
 }
 
 func renderTableDataset(url string, ref tableRef, fields []string, rows [][]interface{}) []byte {
@@ -308,6 +346,148 @@ func renderTableDataset(url string, ref tableRef, fields []string, rows [][]inte
 			cells[i] = cleanCell(cell)
 		}
 		b.WriteString(strings.Join(cells, "\t"))
+		b.WriteByte('\n')
+	}
+	return []byte(b.String())
+}
+
+func deduplicateTables(tables []importedTable) ([]string, [][]string) {
+	var fields []string
+	fieldSeen := map[string]bool{}
+	for _, table := range tables {
+		for _, field := range table.Fields {
+			if !fieldSeen[field] {
+				fieldSeen[field] = true
+				fields = append(fields, field)
+			}
+		}
+	}
+	fields = append(fields, "来源表格")
+
+	type canonicalRow struct {
+		values    map[string]string
+		urlKey    string
+		submitKey string
+		topicID   int64
+	}
+	var records []canonicalRow
+	byURL := map[string]int{}
+	bySubmission := map[string]int{}
+
+	for _, table := range tables {
+		for _, rawRow := range table.Rows {
+			values := map[string]string{"来源表格": table.Ref.TableID}
+			for i, field := range table.Fields {
+				if i < len(rawRow) {
+					values[field] = cleanCell(rawRow[i])
+				}
+			}
+			url := valueByField(values, "链接", "url", "link")
+			title := valueByField(values, "标题", "title")
+			nickname := valueByField(values, "昵称", "nickname", "作者", "author", "用户", "user", "name")
+			urlKey := normalizeURL(url)
+			submitKey := normalizeText(nickname) + "\x00" + normalizeText(title)
+			if title == "" || nickname == "" {
+				submitKey = ""
+			}
+			candidate := canonicalRow{
+				values:    values,
+				urlKey:    urlKey,
+				submitKey: submitKey,
+				topicID:   topicID(url),
+			}
+
+			existing := -1
+			if urlKey != "" {
+				if idx, ok := byURL[urlKey]; ok {
+					existing = idx
+				}
+			}
+			if existing < 0 && submitKey != "" {
+				if idx, ok := bySubmission[submitKey]; ok {
+					existing = idx
+				}
+			}
+			if existing >= 0 {
+				if candidate.topicID > records[existing].topicID {
+					old := records[existing]
+					if old.urlKey != "" {
+						delete(byURL, old.urlKey)
+					}
+					records[existing] = candidate
+					if urlKey != "" {
+						byURL[urlKey] = existing
+					}
+					if submitKey != "" {
+						bySubmission[submitKey] = existing
+					}
+				}
+				continue
+			}
+
+			idx := len(records)
+			records = append(records, candidate)
+			if urlKey != "" {
+				byURL[urlKey] = idx
+			}
+			if submitKey != "" {
+				bySubmission[submitKey] = idx
+			}
+		}
+	}
+
+	rows := make([][]string, 0, len(records))
+	for _, record := range records {
+		row := make([]string, len(fields))
+		for i, field := range fields {
+			row[i] = record.values[field]
+		}
+		rows = append(rows, row)
+	}
+	return fields, rows
+}
+
+func valueByField(values map[string]string, candidates ...string) string {
+	for field, value := range values {
+		normalized := strings.ToLower(strings.TrimSpace(field))
+		for _, candidate := range candidates {
+			if strings.Contains(normalized, candidate) {
+				return value
+			}
+		}
+	}
+	return ""
+}
+
+func normalizeURL(value string) string {
+	value = strings.TrimSpace(value)
+	if match := regexp.MustCompile(`\((https?://[^)]+)\)`).FindStringSubmatch(value); len(match) == 2 {
+		value = match[1]
+	}
+	return strings.ToLower(strings.TrimRight(value, "/"))
+}
+
+func normalizeText(value string) string {
+	return strings.ToLower(strings.Join(strings.Fields(value), " "))
+}
+
+func topicID(value string) int64 {
+	match := regexp.MustCompile(`/topic/(\d+)`).FindStringSubmatch(value)
+	if len(match) != 2 {
+		return 0
+	}
+	n, _ := strconv.ParseInt(match[1], 10, 64)
+	return n
+}
+
+func renderDeduplicatedDataset(url string, fields []string, rows [][]string, total, removed int) []byte {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Source URL: %s\nSource rows: %d\nUnique records: %d\nDuplicates removed: %d\n\n",
+		url, total, len(rows), removed)
+	b.WriteString(strings.Join(fields, "\t"))
+	b.WriteByte('\n')
+	for _, row := range rows {
+		b.WriteString(strings.Join(row, "\t"))
 		b.WriteByte('\n')
 	}
 	return []byte(b.String())

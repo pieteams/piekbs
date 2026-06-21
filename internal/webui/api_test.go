@@ -132,9 +132,13 @@ func TestImportLarkAPI(t *testing.T) {
 			t.Fatalf("unexpected import request: url=%q name=%q", url, name)
 		}
 		return &larkimport.Result{
-			DocumentPath: "raw/lark/test/document.md",
-			TablePaths:   []string{"raw/lark/test/table.txt"},
-			TableRows:    []int{123},
+			DocumentPath:      "raw/lark/test/document.md",
+			TablePaths:        []string{"raw/lark/test/table.snapshot.tsv"},
+			TableRows:         []int{123},
+			DatasetPath:       "raw/lark/test/records-deduplicated.txt",
+			TotalRows:         123,
+			UniqueRows:        120,
+			DuplicatesRemoved: 3,
 		}, nil
 	}
 
@@ -144,13 +148,16 @@ func TestImportLarkAPI(t *testing.T) {
 	server.handleImportLark(rec, req)
 
 	var body struct {
-		OK        bool  `json:"ok"`
-		TableRows []int `json:"table_rows"`
+		OK                bool  `json:"ok"`
+		TableRows         []int `json:"table_rows"`
+		UniqueRows        int   `json:"unique_rows"`
+		DuplicatesRemoved int   `json:"duplicates_removed"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatal(err)
 	}
-	if !body.OK || len(body.TableRows) != 1 || body.TableRows[0] != 123 {
+	if !body.OK || len(body.TableRows) != 1 || body.TableRows[0] != 123 ||
+		body.UniqueRows != 120 || body.DuplicatesRemoved != 3 {
 		t.Fatalf("unexpected response: %s", rec.Body.String())
 	}
 }

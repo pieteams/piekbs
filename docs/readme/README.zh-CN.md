@@ -206,9 +206,9 @@ export WIKILOOP_DISTILL_TOKEN="your-api-key"
 wikiloop import-lark "https://example.larkoffice.com/wiki/..."
 ```
 
-内嵌多维表格会自动分页读取。正文以 Markdown 保存到 `raw/lark/`，
-完整表格行保存为同目录的 `.txt` 数据集。这些数据可被搜索和检索，
-但不会整表发送给 LLM 做蒸馏。
+内嵌多维表格会自动分页读取。原始表格以 `.snapshot.tsv` 保存用于审计；
+WikiLoop 只索引 `records-deduplicated.txt` 去重合集。去重规则包括相同链接，
+以及同一昵称重复提交的相同标题；不同昵称的同名作品会保留。
 
 ### synthesize 工作流：从原始资料到主题汇总
 

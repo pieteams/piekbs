@@ -212,8 +212,7 @@ document.getElementById('lark-import-btn').addEventListener('click', async () =>
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || t('files.lark_failed'));
-        const rows = (data.table_rows || []).reduce((sum, n) => sum + n, 0);
-        status.innerHTML = `<span style="color:#1a7f37">✓ Imported ${escHtml(data.document_path)} · ${(data.table_paths || []).length} table(s), ${rows} row(s)</span>`;
+        status.innerHTML = `<span style="color:#1a7f37">✓ Imported ${escHtml(data.document_path)} · ${data.unique_rows || 0} unique row(s), ${data.duplicates_removed || 0} duplicate(s) removed</span>`;
         input.value = '';
         loadFiles();
     } catch (e) {

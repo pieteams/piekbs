@@ -125,7 +125,11 @@ func runImportLark(kbRoot string, args []string) error {
 	}
 	fmt.Printf("imported document: %s\n", result.DocumentPath)
 	for i, path := range result.TablePaths {
-		fmt.Printf("imported table:   %s (%d rows)\n", path, result.TableRows[i])
+		fmt.Printf("saved snapshot:   %s (%d rows)\n", path, result.TableRows[i])
+	}
+	if result.DatasetPath != "" {
+		fmt.Printf("indexed dataset:  %s (%d unique, %d duplicates removed)\n",
+			result.DatasetPath, result.UniqueRows, result.DuplicatesRemoved)
 	}
 	return nil
 }

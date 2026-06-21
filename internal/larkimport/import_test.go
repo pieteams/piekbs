@@ -45,6 +45,9 @@ func TestImportExpandsBitableIntoSearchableDataset(t *testing.T) {
 	if len(result.TableRows) != 1 || result.TableRows[0] != 3 {
 		t.Fatalf("table rows = %v, want [3]", result.TableRows)
 	}
+	if result.UniqueRows != 3 || result.DuplicatesRemoved != 0 {
+		t.Fatalf("unique=%d removed=%d, want 3/0", result.UniqueRows, result.DuplicatesRemoved)
+	}
 
 	document, err := os.ReadFile(filepath.Join(kbRoot, filepath.FromSlash(result.DocumentPath)))
 	if err != nil {
@@ -54,7 +57,8 @@ func TestImportExpandsBitableIntoSearchableDataset(t *testing.T) {
 	for _, want := range []string{
 		`source_url: "https://example.larkoffice.com/wiki/abc"`,
 		"Rows: 3",
-		"table-01-tblA.txt",
+		"table-01-tblA.snapshot.tsv",
+		"records-deduplicated.txt",
 	} {
 		if !strings.Contains(docText, want) {
 			t.Errorf("document missing %q:\n%s", want, docText)
@@ -64,16 +68,59 @@ func TestImportExpandsBitableIntoSearchableDataset(t *testing.T) {
 		t.Fatal("document still contains an unexpanded bitable tag")
 	}
 
-	dataset, err := os.ReadFile(filepath.Join(kbRoot, filepath.FromSlash(result.TablePaths[0])))
+	dataset, err := os.ReadFile(filepath.Join(kbRoot, filepath.FromSlash(result.DatasetPath)))
 	if err != nil {
 		t.Fatal(err)
 	}
 	dataText := string(dataset)
-	if !strings.Contains(dataText, "Title\tName\n") || !strings.Contains(dataText, "Title 3\tCarol") {
+	if !strings.Contains(dataText, "Title\tName\t来源表格\n") || !strings.Contains(dataText, "Title 3\tCarol\ttblA") {
 		t.Fatalf("dataset content is incomplete:\n%s", dataText)
 	}
 	if runner.calls != 3 {
 		t.Fatalf("runner calls = %d, want 3", runner.calls)
+	}
+}
+
+func TestDeduplicateTablesKeepsNewestRepeatedSubmission(t *testing.T) {
+	tables := []importedTable{
+		{
+			Ref:    tableRef{TableID: "newer"},
+			Fields: []string{"社区昵称", "创意帖链接", "创意帖标题"},
+			Rows: [][]interface{}{
+				{"alice", "https://forum.trae.cn/t/topic/100", "Same idea"},
+				{"bob", "https://forum.trae.cn/t/topic/101", "Same idea"},
+			},
+		},
+		{
+			Ref:    tableRef{TableID: "older"},
+			Fields: []string{"社区昵称", "创意帖链接", "创意帖标题"},
+			Rows: [][]interface{}{
+				{"alice", "https://forum.trae.cn/t/topic/90", "Same idea"},
+				{"carol", "https://forum.trae.cn/t/topic/102", "Unique idea"},
+			},
+		},
+	}
+
+	fields, rows := deduplicateTables(tables)
+	if len(rows) != 3 {
+		t.Fatalf("rows = %d, want 3", len(rows))
+	}
+	joined := make([]string, len(rows))
+	for i, row := range rows {
+		joined[i] = strings.Join(row, "\t")
+	}
+	all := strings.Join(joined, "\n")
+	if strings.Contains(all, "/topic/90") {
+		t.Fatalf("older duplicate was retained:\n%s", all)
+	}
+	if !strings.Contains(all, "/topic/100") {
+		t.Fatalf("newer duplicate was not retained:\n%s", all)
+	}
+	if !strings.Contains(all, "bob") || !strings.Contains(all, "carol") {
+		t.Fatalf("same title from another user or unique row was removed:\n%s", all)
+	}
+	if fields[len(fields)-1] != "来源表格" {
+		t.Fatalf("last field = %q, want 来源表格", fields[len(fields)-1])
 	}
 }
 

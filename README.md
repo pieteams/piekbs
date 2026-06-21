@@ -229,9 +229,10 @@ wikiloop import-lark "https://example.larkoffice.com/wiki/..."
 ```
 
 Embedded Base tables are fetched page by page. The document is saved as
-Markdown under `raw/lark/`; full table rows are saved as sibling `.txt`
-datasets. These datasets are searchable and available to retrieval, but are
-not sent wholesale to the LLM distillation step.
+Markdown under `raw/lark/`. Original tables are preserved as `.snapshot.tsv`
+files for audit. WikiLoop indexes one `records-deduplicated.txt` dataset,
+deduplicating exact links and repeated title + nickname submissions while
+retaining same-title submissions from different users.
 
 ### synthesize workflow: from raw sources to topic summaries
 

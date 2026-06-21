@@ -187,10 +187,14 @@ func (s *Server) handleImportLark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]interface{}{
-		"ok":            true,
-		"document_path": result.DocumentPath,
-		"table_paths":   result.TablePaths,
-		"table_rows":    result.TableRows,
+		"ok":                 true,
+		"document_path":      result.DocumentPath,
+		"table_paths":        result.TablePaths,
+		"table_rows":         result.TableRows,
+		"dataset_path":       result.DatasetPath,
+		"total_rows":         result.TotalRows,
+		"unique_rows":        result.UniqueRows,
+		"duplicates_removed": result.DuplicatesRemoved,
 	})
 }
 
