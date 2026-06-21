@@ -114,15 +114,16 @@ func EmbedDocuments(db *sql.DB, kbRoot string, embedder Embedder, modelName stri
 		return 0, 0, fmt.Errorf("open vec store: %w", err)
 	}
 
-	// Only embed synthesized wiki pages (concept/comparison/decision).
-	// Source-notes are covered by FTS search which handles keyword matching well.
-	// Limiting to synthesized pages keeps vector store small (~300 docs vs 1800+)
-	// since chromem-go loads all vectors into RAM on first query.
+	// Only embed wiki/source-notes. These are the distilled knowledge pages
+	// with the most precise content for semantic search. Concept/comparison/
+	// decision pages are found via FTS AND queries which work well for their
+	// structured titles. Limiting to source-notes keeps RAM usage low since
+	// chromem-go loads all vectors into memory on first query (~455 docs vs 1800+).
 	rows, err := db.Query(
 		`SELECT d.id, d.path, d.layer, COALESCE(d.kind,''), COALESCE(d.title,''), COALESCE(d.description,''), d.content
 		 FROM documents d
 		 WHERE d.layer = 'wiki'
-		 AND d.kind IN ('concept','comparison','decision','wiki-concept','wiki-comparison','wiki-decision','concept-page','comparison-page','decision-page')`,
+		 AND d.id LIKE 'wiki/source-notes/%'`,
 	)
 	if err != nil {
 		return 0, 0, fmt.Errorf("query documents: %w", err)
