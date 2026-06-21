@@ -257,18 +257,78 @@ def generate_answer(question: str, contexts: list[str]) -> str:
     )
 
 # ── 主流程 ────────────────────────────────────────────────────────────────────
+def score_hit_rate(contexts_meta: list[dict], expected_page: str) -> int:
+    """Hit Rate：expected_page 是否出现在检索结果中（1=命中，0=未命中）"""
+    if not expected_page:
+        return 0
+    for ctx in contexts_meta:
+        path = ctx.get("path", "") or ctx.get("id", "")
+        if expected_page in path or path in expected_page:
+            return 1
+    return 0
+
+def score_mrr(contexts_meta: list[dict], expected_page: str) -> float:
+    """MRR：expected_page 首次出现的排名倒数（1/rank），未命中为 0"""
+    if not expected_page:
+        return 0.0
+    for rank, ctx in enumerate(contexts_meta, 1):
+        path = ctx.get("path", "") or ctx.get("id", "")
+        if expected_page in path or path in expected_page:
+            return 1.0 / rank
+    return 0.0
+
+def wikiloop_context_with_meta(question: str) -> tuple[list[str], list[dict]]:
+    """返回 (context文本列表, metadata列表) 用于 Hit Rate 计算"""
+    try:
+        result = mcp_call("tools/call", {
+            "name": "kb_context",
+            "arguments": {"question": question, "limit": 10}
+        })
+        content_text = ""
+        for item in result.get("content", []):
+            if item.get("type") == "text":
+                content_text += item["text"]
+        contexts = []
+        meta = []
+        try:
+            parsed = json.loads(content_text)
+            for page in parsed.get("wiki_pages", []):
+                ctx = f"[{page.get('title','')}] {page.get('description','')}"
+                if page.get("snippet"):
+                    ctx += f"\n{page['snippet']}"
+                contexts.append(ctx)
+                meta.append({"path": page.get("path",""), "id": page.get("id","")})
+            for src in parsed.get("raw_sources", []) or []:
+                meta.append({"path": src.get("path",""), "id": src.get("id","")})
+        except Exception:
+            if content_text:
+                contexts = [content_text[:2000]]
+        return contexts if contexts else ["(no context)"], meta
+    except Exception as e:
+        print(f"  MCP error: {e}")
+        return ["(no context)"], []
+
 def evaluate(questions: list[dict], system_name: str, context_fn) -> dict:
-    scores = {"faithfulness": [], "answer_relevancy": [], "context_precision": [], "context_recall": []}
+    scores = {"faithfulness": [], "answer_relevancy": [], "context_precision": [],
+              "context_recall": [], "hit_rate": [], "mrr": []}
     print(f"\n{'='*50}")
     print(f"评估系统: {system_name}")
     print(f"{'='*50}")
 
+    use_meta = (context_fn == wikiloop_context)
+
     for i, q in enumerate(questions, 1):
         question = q["question"]
         ground_truth = q["ground_truth"]
+        expected_page = q.get("expected_page", "")
         print(f"\n[{i}/{len(questions)}] {question[:60]}...")
 
-        contexts = context_fn(question)
+        if use_meta:
+            contexts, meta = wikiloop_context_with_meta(question)
+        else:
+            contexts = context_fn(question)
+            meta = []
+
         answer = generate_answer(question, contexts)
         print(f"  检索到 {len(contexts)} 个 context 片段")
 
@@ -276,22 +336,31 @@ def evaluate(questions: list[dict], system_name: str, context_fn) -> dict:
         ar = score_answer_relevancy(question, answer)
         cp = score_context_precision(question, contexts)
         cr = score_context_recall(question, contexts, ground_truth)
+        hr = score_hit_rate(meta, expected_page) if use_meta else 0
+        mrr = score_mrr(meta, expected_page) if use_meta else 0.0
 
         scores["faithfulness"].append(f)
         scores["answer_relevancy"].append(ar)
         scores["context_precision"].append(cp)
         scores["context_recall"].append(cr)
-        print(f"  F={f:.2f} AR={ar:.2f} CP={cp:.2f} CR={cr:.2f}")
+        scores["hit_rate"].append(hr)
+        scores["mrr"].append(mrr)
+        print(f"  F={f:.2f} AR={ar:.2f} CP={cp:.2f} CR={cr:.2f} Hit={hr} MRR={mrr:.2f}")
 
     return {k: sum(v)/len(v) if v else 0 for k, v in scores.items()}
 
 def main():
     print("\n=== WikiLoop vs Naive RAG 评估 ===\n")
 
-    # 生成测试问题
-    # 使用预设的 RAG 主题问题集（内容来自 KB 中的高质量 source-notes）
+    # 支持 v2 问题集（concept/comparison/decision，含 expected_page + Hit Rate）
+    # 优先使用 questions_v2.json，回退到 questions_rag.json
+    v2_path = os.path.join(os.path.dirname(__file__), "questions_v2.json")
     preset_path = os.path.join(os.path.dirname(__file__), "questions_rag.json")
-    if os.path.exists(preset_path):
+    if os.path.exists(v2_path):
+        print(f"加载 v2 问题集：{v2_path}")
+        with open(v2_path) as f:
+            questions = json.load(f)
+    elif os.path.exists(preset_path):
         print(f"加载预设问题集：{preset_path}")
         with open(preset_path) as f:
             questions = json.load(f)
@@ -310,10 +379,10 @@ def main():
     print("\n" + "="*60)
     print("📊 评估结果对比")
     print("="*60)
-    metrics = ["faithfulness", "answer_relevancy", "context_precision", "context_recall"]
-    labels  = ["忠实度", "答案相关性", "上下文精度", "上下文召回"]
-    print(f"{'指标':<16} {'WikiLoop':>10} {'Naive RAG':>10} {'提升':>8}")
-    print("-"*48)
+    metrics = ["faithfulness", "answer_relevancy", "context_precision", "context_recall", "hit_rate", "mrr"]
+    labels  = ["忠实度", "答案相关性", "上下文精度", "上下文召回", "命中率(WikiLoop)", "MRR(WikiLoop)"]
+    print(f"{'指标':<18} {'WikiLoop':>10} {'Naive RAG':>10} {'提升':>8}")
+    print("-"*50)
     for m, label in zip(metrics, labels):
         w = wikiloop_scores[m]
         n = naive_scores[m]
