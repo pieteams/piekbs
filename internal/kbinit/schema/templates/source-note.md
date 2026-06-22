@@ -40,6 +40,12 @@ supports: []
   - BAD: "UnWeaver is more efficient than GraphRAG"
   - GOOD: "ChromaDB suits prototypes under 100K vectors; Qdrant suits production 100K-1M with filtering"
   - BAD: "Different vector databases suit different use cases"
+
+  STRUCTURED DOCUMENT RULE (tables, numbered lists, entity catalogs):
+  If the source contains numbered/coded items (e.g. M01-M43, API list, field catalog),
+  ALL items MUST be preserved — do NOT summarize, merge, or omit any entry.
+  Each item must retain: code/ID, name, source system, storage table names, and any specific technical identifiers.
+  Partial preservation is a critical quality failure.
 -->
 
 ## Important Quotes Or Evidence

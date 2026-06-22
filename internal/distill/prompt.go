@@ -37,6 +37,12 @@ IMPORTANT: Preserve ALL specific terms, names, codes, acronyms, and identifiers 
 These exact terms are critical for search — do not paraphrase or generalize them away.
 Each bullet must contain at least one specific number, metric, or named entity.
 
+CRITICAL RULE FOR STRUCTURED DOCUMENTS: If the source contains numbered or coded items
+(e.g. M01-M43, API endpoints, field catalogs, table lists, equipment codes), you MUST
+preserve EVERY item completely — including its ID/code, name, source system, and all
+storage table names (Hive/Iceberg/MatrixDB paths, database.schema.table identifiers).
+Do NOT summarize, merge, or omit any entry. Partial preservation is a critical failure.
+
 ## Quotes
 Notable direct quotes from the document (if any). If none, write "None."
 
