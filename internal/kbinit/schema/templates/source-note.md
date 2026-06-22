@@ -62,6 +62,13 @@ supports: []
   - GOOD: "使用 FTS（Full-Text Search，全文检索，BM25）检索，配合 RRF（倒数排名融合）合并结果"
   This ensures FTS search finds the document regardless of which term the user queries.
 
+  ENTITY RULE (MANDATORY for knowledge graph):
+  Mark named entities inline using 【entity|type】 format. Types: 人物|组织|产品|技术|概念|项目|地点
+  - GOOD: "【Karpathy|人物】提出的【LLM Wiki|概念】采用三层架构，由【Anthropic|组织】等团队验证"
+  - GOOD: "【bge-small-zh|产品】（【BAAI|组织】出品）在【WikiLoop|项目】中用于向量嵌入，维度512"
+  - BAD:  直接写名称不标注类型
+  This enables cross-document entity linking and multi-hop retrieval.
+
   STRUCTURED DOCUMENT RULE (tables, numbered lists, entity catalogs):
   If the source contains numbered/coded items (e.g. M01-M43, API list, field catalog),
   ALL items MUST be preserved — do NOT summarize, merge, or omit any entry.

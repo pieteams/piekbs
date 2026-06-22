@@ -14,6 +14,9 @@ LANGUAGE RULE: Write all content in the SAME language as the source document. Ch
 ALIAS RULE (MANDATORY): In every Key Facts bullet, inline ALL known aliases, abbreviations, and cross-language equivalents.
   BAD:  "召回率偏低"  GOOD: "Context Recall（CR，召回率，检索覆盖率）偏低（0.32）"
 
+ENTITY RULE (MANDATORY): Mark named entities using 【entity|type】. Types: 人物|组织|产品|技术|概念|项目|地点
+  GOOD: "【Karpathy|人物】提出【LLM Wiki|概念】三层架构"
+
 The YAML frontmatter must contain these fields:
   type: source-note
   title: <concise title derived from the document>
@@ -95,6 +98,11 @@ ALIAS RULE (MANDATORY): In every key_claim, inline ALL known aliases, abbreviati
   BAD:  "FTS检索性能较好"
   GOOD: "FTS（Full-Text Search，全文检索，BM25算法）检索性能优于向量搜索（Vector Search）在精确术语匹配场景"
 This is critical for search: users may query with any variant of a term.
+
+ENTITY RULE (MANDATORY): Mark named entities inline using 【entity|type】 format. Types: 人物|组织|产品|技术|概念|项目|地点
+  GOOD: "【Karpathy|人物】提出的【LLM Wiki|概念】采用三层架构，由【Anthropic|组织】等团队验证"
+  GOOD: "【bge-small-zh|产品】（【BAAI|组织】出品）在【WikiLoop|项目】中用于向量嵌入，维度512"
+This enables cross-document entity linking and multi-hop retrieval.
 
 For the sources field, output the literal placeholder ["__RAW_SOURCE__"] exactly as shown — the system fills in the real raw-source path.
 
