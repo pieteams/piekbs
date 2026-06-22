@@ -57,7 +57,7 @@
     "category": "concept",
     "question": "LLM Wiki（Karpathy 方法论）和传统 RAG 的根本区别是什么？",
     "ground_truth": "传统 RAG 每次查询重新从原始文档检索，知识无积累；LLM Wiki 让 LLM 主动编译和维护结构化 wiki，知识一次编译多次直接使用。核心差异：RAG 是'问完就忘'，LLM Wiki 是'越问越聪明'。三层架构：Raw Sources（只读）→ Wiki（LLM 维护）→ Schema（规则）。",
-    "expected_page": "wiki/source-notes/wechat-tech/小爪/Karpathy-的-LLM-Wiki-终极指南-让-AI-替你维护一个-quot-活-quot-的知识库.md"
+    "expected_page": "wiki/comparisons/llm-wiki-vs-retrieval-rag.md"
   },
   {
     "category": "concept",

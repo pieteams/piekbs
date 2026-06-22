@@ -103,7 +103,7 @@ NO_VEC = os.environ.get("WIKILOOP_NO_VEC", "").lower() in ("1", "true", "yes")
 def wikiloop_context(question: str) -> list[str]:
     """调用 WikiLoop MCP kb_context 工具，返回 context 片段列表"""
     try:
-        args = {"question": question, "limit": 5}
+        args = {"question": question, "limit": 10}
         if NO_VEC:
             args["no_vec"] = True
         result = mcp_call("tools/call", {
@@ -201,7 +201,7 @@ def score_faithfulness(answer: str, contexts: list[str]) -> float:
     resp = call_llm(
         "你是一个评估助手。判断答案中的每个声明是否都有 context 支撑。"
         "输出 0.0-1.0 的分数（1.0=完全有支撑，0.0=完全无支撑），只输出数字。",
-        f"Context:\n{ctx_text[:2000]}\n\nAnswer:\n{answer}\n\n忠实度分数："
+        f"Context:\n{ctx_text[:4000]}\n\nAnswer:\n{answer}\n\n忠实度分数："
     )
     try:
         return float(re.search(r'[\d.]+', resp).group())
@@ -244,7 +244,7 @@ def score_context_recall(question: str, contexts: list[str], ground_truth: str) 
     resp = call_llm(
         "判断 context 是否包含了足够的信息来回答问题（参考标准答案）。"
         "输出 0.0-1.0 的分数（1.0=完全覆盖，0.0=完全未覆盖），只输出数字。",
-        f"Question: {question}\nGround Truth: {ground_truth}\nContext:\n{ctx_text[:2000]}\n\n召回率分数："
+        f"Question: {question}\nGround Truth: {ground_truth}\nContext:\n{ctx_text[:4000]}\n\n召回率分数："
     )
     try:
         return float(re.search(r'[\d.]+', resp).group())
@@ -255,7 +255,7 @@ def generate_answer(question: str, contexts: list[str]) -> str:
     ctx_text = "\n".join(contexts)
     return call_llm(
         "你是一个知识库助手。根据给定的 context 回答问题，不要引入 context 之外的信息。",
-        f"Context:\n{ctx_text[:2000]}\n\nQuestion: {question}\n\nAnswer:"
+        f"Context:\n{ctx_text[:4000]}\n\nQuestion: {question}\n\nAnswer:"
     )
 
 # ── 主流程 ────────────────────────────────────────────────────────────────────
@@ -282,9 +282,12 @@ def score_mrr(contexts_meta: list[dict], expected_page: str) -> float:
 def wikiloop_context_with_meta(question: str) -> tuple[list[str], list[dict]]:
     """返回 (context文本列表, metadata列表) 用于 Hit Rate 计算"""
     try:
+        args = {"question": question, "limit": 10}
+        if NO_VEC:
+            args["no_vec"] = True
         result = mcp_call("tools/call", {
             "name": "kb_context",
-            "arguments": {"question": question, "limit": 10}
+            "arguments": args
         })
         content_text = ""
         for item in result.get("content", []):
@@ -326,6 +329,7 @@ def evaluate(questions: list[dict], system_name: str, context_fn) -> dict:
         print(f"\n[{i}/{len(questions)}] {question[:60]}...")
 
         if use_meta:
+            # 单次调用，同时获取 context 和 meta（避免两次 MCP 调用）
             contexts, meta = wikiloop_context_with_meta(question)
         else:
             contexts = context_fn(question)
@@ -399,8 +403,14 @@ def main():
         "wikiloop": wikiloop_scores,
         "naive_rag": naive_scores,
     }
-    out_path = "/tmp/eval_result.json"
+    from datetime import datetime
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    label = "no_vec" if NO_VEC else "vec"
+    out_path = os.path.join(os.path.dirname(__file__), f"results_{ts}_{label}.json")
     with open(out_path, "w") as f:
+        json.dump(out, f, ensure_ascii=False, indent=2)
+    # 同时保存一份到 /tmp 方便快速访问
+    with open("/tmp/eval_result.json", "w") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
     print(f"\n结果已保存到 {out_path}")
 
