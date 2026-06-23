@@ -41,9 +41,11 @@ type PagePlan struct {
 
 const planSystemPrompt = `You are a knowledge-base curator. Given a list of source-note summaries, identify opportunities to synthesize higher-level wiki pages following the Karpathy LLM Wiki structure.
 
-LANGUAGE RULE: Write title, slug, and description in the SAME language as the majority of source-notes.
-If most source-notes are Chinese, output Chinese title and description. Use pinyin-style kebab slug only for Chinese titles.
-Example: title "RAG召回率优化方法论" → slug "rag-zhao-hui-lv-you-hua-fang-fa-lun" or abbreviated "rag-recall-optimization-methodology".
+LANGUAGE RULE (mandatory):
+- title: Chinese main title, keep technical terms in their original English form (e.g. "RAG 召回率优化方法论", "GraphRAG vs Agentic Search 对比")
+- slug: kebab-case derived from the English terms in title (e.g. "rag-recall-optimization-methodology")
+- description: Chinese prose with key technical terms inline in English (e.g. "对比 RAG（Retrieval-Augmented Generation）与长上下文（Long Context）方案的适用场景")
+This ensures FTS matches both Chinese queries ("召回率优化") and English queries ("RAG recall optimization").
 
 Output a JSON array. Each element must have:
   type:        "concept" | "comparison" | "decision"
@@ -119,8 +121,13 @@ func buildGeneratePrompt(kbRoot, pageType string) string {
 	}
 	return fmt.Sprintf(`You are a knowledge-base curator. Generate a wiki %s page in Markdown with YAML frontmatter.
 
-LANGUAGE RULE: Write ALL content (title, description, body) in the SAME language as the source-notes.
-If source-notes are Chinese, output Chinese. Do NOT switch to English unless the source material is English.
+LANGUAGE RULE (mandatory):
+- title: Chinese main title, keep technical terms in their original English form
+  GOOD: "RAG 召回率优化全链路方法论"  BAD: "Full-Chain RAG Recall Optimization Methodology"
+- description: Chinese prose with key technical terms inline in English
+  GOOD: "对比 RAG（Retrieval-Augmented Generation）与长上下文（Long Context）方案的适用场景与权衡"
+- body: Chinese prose, technical terms inline bilingual (e.g. "混合检索（Hybrid Search，BM25+向量）")
+This dual-language approach ensures FTS matches both Chinese queries ("召回率") and English queries ("recall rate").
 
 Output MUST be valid Markdown. Do NOT wrap output in code fences.
 Begin directly with the YAML frontmatter (---).
@@ -133,8 +140,11 @@ Use this template as the exact structure:
 func defaultGeneratePrompt(pageType string) string {
 	return fmt.Sprintf(`You are a knowledge-base curator. Generate a wiki %s page in Markdown with YAML frontmatter.
 
-LANGUAGE RULE: Write ALL content (title, description, body) in the SAME language as the source-notes.
-If source-notes are Chinese, output Chinese. Do NOT switch to English unless the source material is English.
+LANGUAGE RULE (mandatory):
+- title: Chinese main title, keep technical terms in their original English form
+- description: Chinese prose with key technical terms inline in English
+- body: Chinese prose, technical terms inline bilingual
+This ensures FTS matches both Chinese and English queries.
 
 Output MUST be valid Markdown with YAML frontmatter. Do NOT wrap output in code fences.
 The frontmatter must include: type, title, description, tags, sources, timestamp.
