@@ -3,13 +3,13 @@
     "category": "concept",
     "question": "Embedding 模型选型对 RAG 系统有什么影响？选型时需要考虑哪些关键因素？",
     "ground_truth": "Embedding 模型的选择是 RAG 架构的基础性决策，直接决定向量检索质量。关键因素包括：语言支持（中文需专用模型如 BGE）、维度与成本权衡、部署约束（本地 vs API）、领域适配性。错误的模型选择会导致召回率低，后续优化事倍功半。",
-    "expected_page": "wiki/concepts/small-embedding-model-engineering-value.md"
+    "expected_page": "wiki/concepts/embedding-model-switching-costs-rag.md"
   },
   {
     "category": "comparison",
     "question": "传统向量检索、混合检索和树结构检索（TreeSearch）各有什么优劣？适用什么场景？",
     "ground_truth": "传统向量检索语义理解强但词法精确度差；混合检索（向量+BM25）结合两者优点，适合企业知识库；树结构检索保留文档层级，适合长文档精准问答，FinanceBench 准确率达 98.7%；无向量方法（BM25/GraphRAG）适合精确匹配和关系推理场景。",
-    "expected_page": "wiki/comparisons/comparison-of-rag-retrieval-methods.md"
+    "expected_page": "wiki/comparisons/rag-retrieval-methods-comparison.md"
   },
   {
     "category": "decision",
@@ -27,31 +27,31 @@
     "category": "comparison",
     "question": "Agentic RAG 和 GraphRAG 相比，哪个更适合替代传统向量 RAG？",
     "ground_truth": "Agentic Search（多步推理检索）在简单-中等复杂度问题上可替代 GraphRAG，且无需预构建图谱。GraphRAG 在需要全局理解和社区摘要的场景有优势。对大多数企业场景，Agentic RAG 性价比更高；关系密集型领域（供应链、法规追溯）仍需 GraphRAG。",
-    "expected_page": "wiki/comparisons/dense-graph-agentic-rag-comparison.md"
+    "expected_page": "wiki/decisions/decision-agentic-search-vs-graphrag.md"
   },
   {
     "category": "concept",
     "question": "RAG 召回率优化有哪些关键方法？从数据入库到检索后处理各阶段有哪些手段？",
     "ground_truth": "五阶段优化：数据入库（语义分块、元数据过滤）；检索前（查询重写、HyDE）；检索中（混合检索、RRF融合）；检索后（Cross-Encoder重排、上下文压缩、MMR去重）；生成（引用强制、自我反思）。最高性价比是重排序。",
-    "expected_page": "wiki/concepts/full-chain-rag-recall-optimization-methodology.md"
+    "expected_page": "wiki/comparisons/rag-retrieval-methods-comparison.md"
   },
   {
     "category": "decision",
     "question": "长上下文窗口（128K+）能否替代 RAG？什么情况下应该用 RAG 而不是长上下文？",
     "ground_truth": "长上下文不能替代 RAG：注意力稀释（Lost in the Middle）导致中段内容召回率下降；计算成本随上下文二次增长；动态更新的知识库需要 RAG 的增量检索能力。RAG 适合大型动态知识库、需要精确引用溯源、对延迟和成本敏感的场景。",
-    "expected_page": "wiki/decisions/rag-vs-long-context-decision.md"
+    "expected_page": "wiki/comparisons/rag-vs-long-context-applicability-comparison.md"
   },
   {
     "category": "concept",
     "question": "章节树索引（Chapter Tree Indexing）是什么？它如何解决传统分块的问题？",
     "ground_truth": "章节树索引把文档组织成层级树（目录→章节→段落），LLM 通过推理导航定位答案而非向量匹配。解决了传统固定分块切断语义的问题。在 FinanceBench 上准确率达 98.7%，特别适合有层级结构的长文档（财报、法规、技术手册）。",
-    "expected_page": "wiki/concepts/chapter-tree-indexing-for-knowledge-base-rag.md"
+    "expected_page": "wiki/concepts/chapter-tree-indexing-for-personal-kb-rag.md"
   },
   {
     "category": "comparison",
     "question": "文件系统快照和向量数据库作为 AI Agent 记忆存储，各有什么优劣？",
     "ground_truth": "文件系统快照：可读可编辑、版本可控、无需专用服务；适合结构化知识和跨会话状态继承。向量数据库：语义检索能力强、支持大规模相似度搜索；适合非结构化长期记忆。混合方案（WikiLoop 模式）：文件系统存储显式知识，向量用于检索，兼顾可审计性和语义能力。",
-    "expected_page": "wiki/comparisons/file-based-memory-engines-vs-vector-databases-ai-agents.md"
+    "expected_page": "wiki/comparisons/agentmemory-vs-hermes-memory-systems.md"
   },
   {
     "category": "concept",
@@ -69,6 +69,6 @@
     "category": "decision",
     "question": "应该选择 Agentic RAG 还是基于结构化树索引的方案来构建企业知识库问答？",
     "ground_truth": "结构化树索引（PageIndex/TreeSearch）适合：文档有清晰层级结构、需要精确引用溯源、延迟要求低。Agentic RAG 适合：动态多源知识、复杂多跳推理、需要联网补充。两者可结合：树索引做精确检索，Agent 协调多轮检索策略。",
-    "expected_page": "wiki/decisions/decision-adopting-vectifypageindex-for-enterprise-kb-rag.md"
+    "expected_page": "wiki/decisions/knowledge-base-paradigm-selection-llm-wiki-vs-traditional-rag.md"
   }
 ]
