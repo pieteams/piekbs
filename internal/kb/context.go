@@ -24,11 +24,11 @@ type ContextBundle struct {
 	Conflicts  []Conflict     `json:"conflicts"`
 }
 
-// minHybridScore is the minimum hybrid score for a wiki page to be included
-// in the context bundle. Results below this threshold are likely noise.
-// Note: multiKindFTS parallel RRF distributes scores across more lists,
-// so scores are naturally lower than single-FTS mode (~0.02-0.03 range).
+// minHybridScore is the minimum hybrid score for source-notes to be included.
+// Synthesized pages (concept/comparison/decision) use a lower threshold because
+// multiKindFTS parallel RRF naturally spreads scores across more result lists.
 const minHybridScore = 0.025
+const minHybridScoreSynthesized = 0.012
 
 // maxRawSources limits the number of cited raw sources returned per bundle
 // to avoid flooding the LLM context with loosely-related documents.
@@ -106,12 +106,18 @@ func compressResults(results []SearchResult, limit int) []SearchResult {
 	}
 	var filtered []SearchResult
 	for _, r := range results {
-		if hasHybrid && r.HybridScore < minHybridScore {
-			continue
+		if hasHybrid {
+			// Use a lower threshold for synthesized pages (concept/comparison/decision)
+			// because multiKindFTS parallel RRF naturally produces lower scores for them.
+			threshold := minHybridScore
+			if isSynthesizedKind(r.Kind) {
+				threshold = minHybridScoreSynthesized
+			}
+			if r.HybridScore < threshold {
+				continue
+			}
 		}
-		// Drop low-quality synthesized pages: concept/comparison/decision pages
-		// with very short descriptions are likely single-source drafts that add
-		// noise without meaningful content.
+		// Drop low-quality synthesized pages with very short descriptions.
 		if isSynthesizedKind(r.Kind) && len([]rune(r.Description)) < 30 {
 			continue
 		}
