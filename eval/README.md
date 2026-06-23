@@ -156,3 +156,7 @@ python3 eval/eval_wikiloop.py
 **说明：** 12道题 expected_page 全部改为 source-note，不再依赖 synthesized pages。
 Hit Rate 0.583 是稳定基准，不受 draft/synthesize 状态影响，后续优化以此为对比基准。
 MRR 偏低（0.165）因为 source-note 在多篇同主题文章中排名分散，top1 命中率较低。
+
+| **无向量·v3题集** | 0.942 | 0.233 | 0.308 | 0.333 | 0.050 |
+
+**v3 向量贡献：** CP +0.303，CR +0.259，Hit Rate +0.250，MRR +0.115。向量价值稳定确认。
