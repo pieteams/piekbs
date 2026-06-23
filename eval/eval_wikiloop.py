@@ -14,7 +14,7 @@ WikiLoop vs Naive RAG 评估脚本
 import os, sys, json, re, yaml, requests, glob, random, time, threading
 from concurrent.futures import ThreadPoolExecutor
 
-_llm_lock = threading.Semaphore(5)  # 最多同时5个 LLM 请求
+_llm_lock = threading.Semaphore(3)  # 最多同时3个 LLM 请求（两路系统并行时总并发受控）
 from pathlib import Path
 
 # ── 读取配置 ──────────────────────────────────────────────────────────────────
