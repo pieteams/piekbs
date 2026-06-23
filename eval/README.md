@@ -120,3 +120,11 @@ python3 eval/eval_wikiloop.py
 - 向量数据库选型（ChromaDB/FAISS/Qdrant/Milvus）
 - UnWeaver vs GraphRAG
 - LLM Wiki vs 传统 RAG（Karpathy 三层架构）
+
+### 清理英文 synthesized pages 后（2026-06-23）
+
+| 版本 | AR | CP | CR | Hit Rate | MRR |
+|---|---|---|---|---|---|
+| **有向量（清理后，当前最佳CR）** | **0.992** | **0.591** | **0.614** | **0.667** | **0.472** |
+
+**CR 0.614 历史最高**。删除 872 篇英文标题 synthesized pages，context 精度和召回同步提升。
