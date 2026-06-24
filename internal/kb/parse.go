@@ -27,6 +27,7 @@ type ParsedDocument struct {
 	Supersedes  []string
 	Supports    []string
 	RelatedTo   []string
+	KeyClaims   []string
 	Authority   int // 1-5, default 3
 	RawFM       map[string]interface{}
 }
@@ -80,6 +81,7 @@ func ParseMarkdown(text string) *ParsedDocument {
 	pd.Supersedes = asStringList(fm["supersedes"])
 	pd.Supports = asStringList(fm["supports"])
 	pd.RelatedTo = asStringList(fm["related_to"])
+	pd.KeyClaims = asStringList(fm["key_claims"])
 
 	pd.Wikilinks = wlRe.FindAllString(pd.Content, -1)
 	for i, wl := range pd.Wikilinks {

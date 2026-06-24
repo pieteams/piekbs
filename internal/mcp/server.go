@@ -149,6 +149,19 @@ func registerTools(s *mcpserver.MCPServer, kbRoot string, embedder kb.Embedder) 
 		return toolResultJSON(data)
 	})
 
+	// kb_page ─────────────────────────────────────────────────────────────────
+	pageTool := mcp.NewTool("kb_page",
+		mcp.WithDescription("Fetch full content of one or more wiki pages by ID. Use after kb_search to deep-read documents of interest. IDs come from kb_search result id fields. Pass full=true with a single ID to get complete untruncated text."),
+		mcp.WithArray("ids", mcp.Required(), mcp.Description("Document IDs to fetch (1-5, from kb_search result id fields)")),
+		mcp.WithBoolean("full", mcp.Description("Return complete untruncated text. Only applies when a single ID is passed (default false)")),
+	)
+	s.AddTool(pageTool, func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		ids := req.GetStringSlice("ids", nil)
+		full := req.GetBool("full", false)
+		data := handleKBPage(kbRoot, ids, full)
+		return toolResultJSON(data)
+	})
+
 	// kb_reindex ─────────────────────────────────────────────────────────────
 	reindexTool := mcp.NewTool("kb_reindex",
 		mcp.WithDescription("Rebuild the WikiLoop FTS index incrementally after KB files change."),

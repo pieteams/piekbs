@@ -149,6 +149,27 @@ func handleKBReindex(kbRoot string, full bool) map[string]interface{} {
 	}
 }
 
+// handleKBPage fetches full content for one or more wiki pages by ID.
+func handleKBPage(kbRoot string, ids []string, full bool) map[string]interface{} {
+	if len(ids) == 0 {
+		return map[string]interface{}{"error": "ids is required"}
+	}
+	if len(ids) > 5 {
+		ids = ids[:5] // cap at 5
+	}
+	db, err := kb.OpenDB(kbRoot)
+	if err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	defer db.Close()
+
+	pages, err := kb.FetchPages(db, kbRoot, ids, full)
+	if err != nil {
+		return map[string]interface{}{"error": err.Error()}
+	}
+	return map[string]interface{}{"pages": pages}
+}
+
 // handleKBLint runs deterministic health checks over wiki pages and returns
 // the list of warnings (missing required fields, broken source links).
 func handleKBLint(kbRoot string) map[string]interface{} {
