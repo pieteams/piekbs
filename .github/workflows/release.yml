@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-macos:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +21,6 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          brew install onnxruntime
           brew install FiloSottile/musl-cross/musl-cross
           brew install create-dmg
 
@@ -35,24 +34,59 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist
+          name: dist-macos
           path: |
             dist/WikiLoop-${{ steps.version.outputs.VERSION }}-darwin-arm64.dmg
             dist/wikiloop-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz
             dist/wikiloop-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz
 
+  build-windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Build windows-amd64 (pure Go, no CGO)
+        run: |
+          mkdir -p dist
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
+            go build -tags fts5 \
+            -ldflags "-s -w -X main.Version=${{ steps.version.outputs.VERSION }}" \
+            -o dist/wikiloop.exe ./cmd/wikiloop/
+          cd dist && zip -q wikiloop-${{ steps.version.outputs.VERSION }}-windows-amd64.zip wikiloop.exe && rm wikiloop.exe
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-windows
+          path: dist/wikiloop-${{ steps.version.outputs.VERSION }}-windows-amd64.zip
+
   release:
-    needs: [build]
+    needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
     steps:
       - name: Extract version from tag
         id: version
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
-      - name: Download artifacts
+      - name: Download macOS/Linux artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dist
+          name: dist-macos
+          path: dist/
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-windows
           path: dist/
 
       - name: Create GitHub Release
@@ -60,6 +94,16 @@ jobs:
         with:
           name: WikiLoop v${{ steps.version.outputs.VERSION }}
           body: |
+            ## What's New
+
+            - **Knowledge search engine for agents** — kb_search returns layered results with `related` field for graph navigation
+            - **kb_page tool** — deep-read full document content by ID
+            - **Removed vector search** — pure FTS (SQLite FTS5 + BM25), no embedding model required; binary ~20MB
+            - **Windows support** — pure Go build, no CGO dependencies
+            - **Lark/Feishu import** — `wikiloop import-lark <URL>` imports Wiki pages and embedded tables
+            - **synthesized pages _draft/ threshold** — single-source pages go to `_draft/`, graduate when ≥2 sources
+            - **synthesizedBoost** — multiplicative 1.3× boost for concept/comparison/decision pages
+
             ## Installation
 
             ### macOS Apple Silicon
@@ -72,16 +116,17 @@ jobs:
             sudo ln -sf $(pwd)/wikiloop /usr/local/bin/wikiloop
             ```
 
-            ## Embedding Model
-            Download separately and place in `<WIKILOOP_KB>/models/bge-small-zh/`:
-            - `model.onnx`
-            - `tokenizer.json`
-            - `meta.json`
+            ### Windows (x86_64)
+            ```powershell
+            Expand-Archive wikiloop-${{ steps.version.outputs.VERSION }}-windows-amd64.zip
+            # Add wikiloop.exe to PATH
+            ```
 
             See [README](https://github.com/jasen215/wikiloop#quick-start) for full setup instructions.
           files: |
             dist/WikiLoop-${{ steps.version.outputs.VERSION }}-darwin-arm64.dmg
             dist/wikiloop-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz
             dist/wikiloop-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz
+            dist/wikiloop-${{ steps.version.outputs.VERSION }}-windows-amd64.zip
           draft: false
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
