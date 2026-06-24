@@ -4,12 +4,16 @@ package kb
 
 import (
 	"database/sql"
-	"math"
 	"regexp"
 	"strings"
-	"time"
 	"unicode/utf8"
 )
+
+// Embedder computes a vector embedding for a text string.
+// Kept for interface compatibility; passing nil disables vector search.
+type Embedder interface {
+	Encode(text string) ([]float32, error)
+}
 
 // SearchResult holds a single result from FTS or hybrid search.
 type SearchResult struct {
@@ -290,224 +294,20 @@ func buildFTSAndQuery(keywords []string) string {
 
 // rrfK is the constant in Reciprocal Rank Fusion: score = 1/(k + rank).
 // k=60 is the standard value from the original RRF paper (Cormack et al., 2009).
-// Higher k reduces the impact of top-rank differences; lower k amplifies them.
 const rrfK = 60.0
 
-// HybridRank merges FTS and vector results using Reciprocal Rank Fusion (RRF).
-//
-// RRF score for each source: 1 / (rrfK + rank_in_that_source)
-// Final score = rrfFTS + rrfVec + wikiBoost + graphBoost
-//
-// Wiki-layer docs get a small additive boost so they surface before raw-layer
-// docs of equal relevance. Graph boost rewards docs that are linked from other
-// highly-ranked results.
-//
-// boostMap maps doc ID → graph boost value (may be nil).
-// Results are returned sorted by hybrid score descending.
-func HybridRank(ftsResults, vecResults []SearchResult, boostMap map[string]float64, recencyMap map[string]int64) []SearchResult {
-	type entry struct {
-		r        SearchResult
-		ftsRank  int // 1-based rank in FTS results (0 = not present)
-		vecRank  int // 1-based rank in vec results (0 = not present)
+// biEncoderRerank truncates results to limit.
+// embedder parameter is kept for interface compatibility; nil always uses truncation path.
+func biEncoderRerank(query string, results []SearchResult, embedder Embedder, limit int) []SearchResult {
+	if len(results) == 0 {
+		return results
 	}
-	merged := make(map[string]*entry)
-
-	for i, r := range ftsResults {
-		merged[r.ID] = &entry{r: r, ftsRank: i + 1}
+	if limit > 0 && len(results) > limit {
+		return results[:limit]
 	}
-	for i, r := range vecResults {
-		if e, ok := merged[r.ID]; ok {
-			e.vecRank = i + 1
-			e.r.VecScore = r.VecScore
-		} else {
-			merged[r.ID] = &entry{r: r, vecRank: i + 1}
-		}
-	}
-
-	results := make([]SearchResult, 0, len(merged))
-	for _, e := range merged {
-		r := e.r
-
-		var rrfScore float64
-		if e.ftsRank > 0 {
-			rrfScore += 1.0 / (rrfK + float64(e.ftsRank))
-		}
-		if e.vecRank > 0 {
-			rrfScore += 1.0 / (rrfK + float64(e.vecRank))
-		}
-
-		// Additive boosts (small relative to RRF scores to preserve rank order).
-		if r.Layer == "wiki" {
-			rrfScore += 1.0 / (rrfK + 1) * 0.5 // half a top-1 wiki contribution
-			if recencyMap != nil {
-				if ts, ok := recencyMap[r.ID]; ok {
-					rrfScore += recencyBoost(ts)
-				}
-			}
-		}
-		// Synthesized page boost: concept/comparison/decision pages are distilled
-		// knowledge summaries — they should rank above raw source-notes when present.
-		// This counteracts vector search inflating source-note scores via vec_score.
-		switch r.Kind {
-		case "concept", "comparison", "decision":
-			rrfScore += 1.0 / (rrfK + 1) * 0.8 // ~80% of a top-1 contribution
-		}
-		// Authority boost: each extra point above baseline (3) adds ~0.005 to score.
-		// authority=5 gets +0.010, authority=4 gets +0.005, authority=1/2 gets penalty.
-		if r.Authority > 0 {
-			rrfScore += float64(r.Authority-3) * 0.005
-		}
-		if boostMap != nil {
-			rrfScore += boostMap[r.ID] * 0.01
-		}
-
-		r.HybridScore = rrfScore
-		r.GraphBoost = 0
-		if boostMap != nil {
-			r.GraphBoost = boostMap[r.ID]
-		}
-		results = append(results, r)
-	}
-
-	// Sort by hybrid score descending.
-	for i := 1; i < len(results); i++ {
-		for j := i; j > 0 && results[j].HybridScore > results[j-1].HybridScore; j-- {
-			results[j], results[j-1] = results[j-1], results[j]
-		}
-	}
-
 	return results
 }
 
-// abs64 returns the absolute value of v.
-func abs64(v float64) float64 {
-	if v < 0 {
-		return -v
-	}
-	return v
-}
-
-// cosineSim returns the cosine similarity between two vectors.
-// Returns 0 if either vector has zero magnitude.
-func cosineSim(a, b []float32) float64 {
-	if len(a) != len(b) {
-		return 0
-	}
-	var dot, magA, magB float64
-	for i := range a {
-		dot += float64(a[i]) * float64(b[i])
-		magA += float64(a[i]) * float64(a[i])
-		magB += float64(b[i]) * float64(b[i])
-	}
-	if magA == 0 || magB == 0 {
-		return 0
-	}
-	return dot / (math.Sqrt(magA) * math.Sqrt(magB))
-}
-
-// biEncoderRerank re-scores results using the embedder.
-// Each result is scored by cosine similarity between the query embedding
-// and the embedding of "title description". Results are sorted descending
-// and truncated to limit. Falls back to original order if embedder is nil
-// or encoding fails.
-func biEncoderRerank(query string, results []SearchResult, embedder Embedder, limit int) []SearchResult {
-	if embedder == nil || len(results) == 0 {
-		if limit < len(results) {
-			return results[:limit]
-		}
-		return results
-	}
-
-	queryVec, err := embedder.Encode(query)
-	if err != nil {
-		if limit < len(results) {
-			return results[:limit]
-		}
-		return results
-	}
-
-	type scored struct {
-		r     SearchResult
-		score float64
-	}
-	scored_ := make([]scored, 0, len(results))
-	for _, r := range results {
-		text := r.Title
-		if r.Description != "" {
-			text += " " + r.Description
-		}
-		vec, err := embedder.Encode(text)
-		if err != nil {
-			scored_ = append(scored_, scored{r, 0})
-			continue
-		}
-		scored_ = append(scored_, scored{r, cosineSim(queryVec, vec)})
-	}
-
-	// Insertion sort descending by score.
-	for i := 1; i < len(scored_); i++ {
-		for j := i; j > 0 && scored_[j].score > scored_[j-1].score; j-- {
-			scored_[j], scored_[j-1] = scored_[j-1], scored_[j]
-		}
-	}
-
-	out := make([]SearchResult, 0, limit)
-	for i, s := range scored_ {
-		if i >= limit {
-			break
-		}
-		out = append(out, s.r)
-	}
-	return out
-}
-
-// recencyBoost returns a small additive score for recently-updated wiki documents.
-// Documents updated within 30 days receive up to half a top-1 RRF contribution,
-// decaying linearly to zero at 30 days. Raw/schema docs are not boosted.
-func recencyBoost(updatedAt int64) float64 {
-	const maxAgeDays = 30.0
-	ageDays := float64(time.Now().Unix()-updatedAt) / 86400.0
-	if ageDays < 0 {
-		ageDays = 0
-	}
-	if ageDays >= maxAgeDays {
-		return 0
-	}
-	// Linear decay: 1.0 at age=0, 0.0 at age=maxAgeDays
-	decay := 1.0 - ageDays/maxAgeDays
-	// Max boost = half a top-1 RRF contribution * 0.1 (small relative to relevance)
-	return (1.0 / (rrfK + 1)) * 0.5 * 0.1 * decay
-}
-
-// fetchRecencyMap queries updated_at for a set of doc IDs.
-func fetchRecencyMap(db *sql.DB, ids []string) map[string]int64 {
-	if len(ids) == 0 {
-		return nil
-	}
-	placeholders := make([]string, len(ids))
-	args := make([]interface{}, len(ids))
-	for i, id := range ids {
-		placeholders[i] = "?"
-		args[i] = id
-	}
-	rows, err := db.Query(
-		"SELECT id, updated_at FROM documents WHERE id IN ("+strings.Join(placeholders, ",")+")",
-		args...,
-	)
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-	m := make(map[string]int64, len(ids))
-	for rows.Next() {
-		var id string
-		var ts int64
-		if rows.Scan(&id, &ts) == nil {
-			m[id] = ts
-		}
-	}
-	return m
-}
 
 // multiKindFTS runs FTS queries for each wiki kind in parallel and merges via RRF.
 // This gives each kind (source-note, concept, comparison, decision) an equal chance
@@ -605,45 +405,20 @@ func Search(db *sql.DB, kbRoot string, query string, layer *string, limit int, e
 
 // SearchFiltered is like Search but also accepts an optional kind filter.
 func SearchFiltered(db *sql.DB, kbRoot string, query string, layer, kind *string, limit int, embedder Embedder) ([]SearchResult, []GraphNeighbor, []Conflict, error) {
-	// Over-fetch for rerank: retrieve 4x candidates
 	fetchLimit := limit * 4
-
-	// Multi-kind parallel FTS with RRF merge across source-note/concept/comparison/decision.
 	ftsResults, err := multiKindFTS(db, query, layer, kind, fetchLimit)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-
-	var results []SearchResult
-
-	if embedder != nil && VecStoreExists(kbRoot) {
-		queryVec, encErr := embedder.Encode(query)
-		if encErr == nil {
-			vecResults, _ := VecSearch(kbRoot, queryVec, layer, fetchLimit)
-			// Collect graph boost for merged result set.
-			allIDs := collectIDs(ftsResults, vecResults)
-			boostMap := GraphBoost(db, allIDs)
-			recencyMap := fetchRecencyMap(db, allIDs)
-			results = HybridRank(ftsResults, vecResults, boostMap, recencyMap)
-		} else {
-			// Encoding failed; fall back to FTS only.
-			results = applyGraphBoost(db, ftsResults)
-		}
-	} else {
-		results = applyGraphBoost(db, ftsResults)
-	}
-
-	// Bi-encoder rerank: re-score candidates and truncate to limit.
-	results = biEncoderRerank(query, results, embedder, limit)
-
-	// Graph expansion and conflict detection on final result set.
+	results := applyGraphBoost(db, ftsResults)
+	// biEncoderRerank with nil embedder just truncates to limit
+	results = biEncoderRerank(query, results, nil, limit)
 	ids := make([]string, len(results))
 	for i, r := range results {
 		ids[i] = r.ID
 	}
 	neighbors := GraphExpand(db, ids, limit)
 	conflicts := ConflictLinks(db, ids)
-
 	return results, neighbors, conflicts, nil
 }
 
@@ -663,21 +438,3 @@ func applyGraphBoost(db *sql.DB, ftsResults []SearchResult) []SearchResult {
 	return ftsResults
 }
 
-// collectIDs returns deduplicated IDs from two result slices.
-func collectIDs(a, b []SearchResult) []string {
-	seen := make(map[string]bool, len(a)+len(b))
-	var ids []string
-	for _, r := range a {
-		if !seen[r.ID] {
-			seen[r.ID] = true
-			ids = append(ids, r.ID)
-		}
-	}
-	for _, r := range b {
-		if !seen[r.ID] {
-			seen[r.ID] = true
-			ids = append(ids, r.ID)
-		}
-	}
-	return ids
-}

@@ -7,10 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"path/filepath"
-	"time"
 
-	"github.com/jasen215/wikiloop/internal/embed"
 	"github.com/jasen215/wikiloop/internal/kb"
 	"github.com/mark3labs/mcp-go/mcp"
 	mcpserver "github.com/mark3labs/mcp-go/server"
@@ -89,13 +86,7 @@ func RegisterRoutes(mux *http.ServeMux, kbRoot string, apiKey ...string) {
 		mcpserver.WithInstructions(serverInstructions),
 	)
 
-	// Initialize embedder: find model dir then create embedder.
-	var embedder kb.Embedder
-	if modelDir := embed.FindModelDir(filepath.Join(kbRoot, "models")); modelDir != "" {
-		embedder = embed.NewONNXEmbedder(modelDir, 384, 5*time.Minute)
-	}
-
-	registerTools(s, kbRoot, embedder)
+	registerTools(s, kbRoot, nil) // embedder always nil after devectorization
 
 	httpSrv := mcpserver.NewStreamableHTTPServer(s)
 

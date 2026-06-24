@@ -221,12 +221,5 @@ func purgeStale(db *sql.DB, kbRoot string, currentIDs map[string]bool) (int, err
 	db.Exec(fmt.Sprintf("DELETE FROM links WHERE source_doc_id IN (%s) OR target_doc_id IN (%s)", ph, ph), append(args, args...)...)
 	db.Exec(fmt.Sprintf("DELETE FROM documents WHERE id IN (%s)", ph), args...)
 
-	// Also remove stale vectors from chromem so they can't surface in search results.
-	if VecStoreExists(kbRoot) {
-		if vs, vsErr := OpenVecStore(kbRoot); vsErr == nil {
-			_ = vs.Delete(stale)
-		}
-	}
-
 	return len(stale), nil
 }

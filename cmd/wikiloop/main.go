@@ -90,8 +90,6 @@ func run() error {
 		return runContext(*kbRoot, args[1:])
 	case "index":
 		return runIndex(*kbRoot)
-	case "embed":
-		return runEmbed(*kbRoot, args[1:])
 	case "lint":
 		return runLint(*kbRoot, args[1:])
 	case "service":
@@ -170,10 +168,7 @@ func preflightCheck(kbRoot string, cfg *config.Config) error {
 		}
 	}
 
-	// 2 & 3. ONNX runtime + embedding model (platform-conditional).
-	warns = append(warns, preflightCheckEmbedWarns(kbRoot, cfg)...)
-
-	// 4. Port availability — probe by dialing; a successful connection means
+	// 2. Port availability — probe by dialing; a successful connection means
 	// something is already listening. Read-only, does not claim the port.
 	// This is fatal: HTTP MCP + Web UI cannot start on a taken port, so the
 	// app would be useless. Abort instead of leaving a half-dead menubar.
@@ -261,10 +256,6 @@ func runServe(kbRoot string) error {
 	// Pre-flight environment check: logs warnings (and on GUI launch opens an
 	// HTML report). A fatal issue (e.g. port in use) aborts startup.
 	if err := preflightCheck(kbRoot, cfg); err != nil {
-		return err
-	}
-
-	if err := setupRuntimeDeps(cfg, kbRoot, true); err != nil {
 		return err
 	}
 
@@ -395,7 +386,6 @@ func catchUpFn(kbRoot string, since time.Time, cfg *config.Config) {
 	log.Printf("catch-up: %d files indexed", n)
 
 	if cfg.Distill.BaseURL != "" && cfg.Distill.Token != "" && cfg.Distill.Model != "" {
-		embedder := makeEmbedder(kbRoot, cfg) // may be nil
 		distillCfg := distill.Config{
 			BaseURL: cfg.Distill.BaseURL,
 			Token:   cfg.Distill.Token,
@@ -406,7 +396,7 @@ func catchUpFn(kbRoot string, since time.Time, cfg *config.Config) {
 		distilled := 0
 		for _, rawPath := range files {
 			rel, _ := filepath.Rel(filepath.Join(kbRoot, "raw"), rawPath)
-			if err := distill.DistillFile(distillCfg, rawPath, kbRoot, embedder); err != nil {
+			if err := distill.DistillFile(distillCfg, rawPath, kbRoot, nil); err != nil {
 				log.Printf("catch-up distill: %v", err)
 			} else {
 				log.Printf("catch-up distill: distilled raw/%s", rel)
@@ -424,9 +414,6 @@ func catchUpFn(kbRoot string, since time.Time, cfg *config.Config) {
 			}
 		}
 	}
-
-	// Embed new documents if model is available.
-	runEmbedStep(kbRoot, cfg)
 }
 
 // reindexFn is the callback used by the file watcher.
@@ -460,7 +447,6 @@ func reindexFn(kbRoot string) {
 	}
 	// 3. Distill new raw files if LLM config is available.
 	if cfg.Distill.BaseURL != "" && cfg.Distill.Token != "" && cfg.Distill.Model != "" {
-		embedder := makeEmbedder(kbRoot, cfg) // may be nil
 		distillCfg := distill.Config{
 			BaseURL: cfg.Distill.BaseURL,
 			Token:   cfg.Distill.Token,
@@ -470,7 +456,7 @@ func reindexFn(kbRoot string) {
 		files := distill.FindNewFiles(kbRoot)
 		for _, rawPath := range files {
 			rel, _ := filepath.Rel(filepath.Join(kbRoot, "raw"), rawPath)
-			if err := distill.DistillFile(distillCfg, rawPath, kbRoot, embedder); err != nil {
+			if err := distill.DistillFile(distillCfg, rawPath, kbRoot, nil); err != nil {
 				log.Printf("watcher distill: %v", err)
 			} else {
 				log.Printf("watcher distill: distilled raw/%s", rel)
@@ -484,9 +470,6 @@ func reindexFn(kbRoot string) {
 			db2.Close()
 		}
 	}
-
-	// 5. Embed new documents if model is available.
-	runEmbedStep(kbRoot, cfg)
 }
 
 
