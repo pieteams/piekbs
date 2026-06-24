@@ -34,9 +34,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 
 	byLayer, total, _ := kb.LayerCounts(db)
-
-	var embCount int
-	_ = db.QueryRow("SELECT COUNT(*) FROM embeddings").Scan(&embCount)
+	byKind, _ := kb.KindCounts(db)
 
 	var indexSize int64
 	if fi, err := os.Stat(dbPath); err == nil {
@@ -46,7 +44,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]interface{}{
 		"documents":  total,
 		"by_layer":   byLayer,
-		"embeddings": embCount,
+		"by_kind":    byKind,
 		"index_path": dbPath,
 		"index_size": indexSize,
 	})

@@ -45,7 +45,7 @@ nav a.active {
 }
 
 .container {
-    max-width: 900px;
+    max-width: 80%;
     margin: 2rem auto;
     padding: 0 1rem;
 }
@@ -65,21 +65,28 @@ nav a.active {
     color: #222;
 }
 
-.stat-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+/* Status row: all stats in one line, fill full width */
+.status-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+    width: 100%;
 }
 
 .stat-item {
     text-align: center;
-    padding: 0.75rem;
+    padding: 0.75rem 1.2rem;
     background: #f9f9fb;
     border-radius: 6px;
+    flex: 1;
+}
+
+.kind-item {
+    flex: 1;
 }
 
 .stat-value {
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 700;
     color: #3b5bdb;
 }
@@ -88,6 +95,40 @@ nav a.active {
     font-size: 12px;
     color: #666;
     margin-top: 4px;
+}
+
+.stat-divider {
+    width: 1px;
+    background: #e0e0e0;
+    margin: 0 0.25rem;
+    align-self: stretch;
+}
+
+.kind-item {
+    text-align: center;
+    padding: 0.5rem 0.75rem;
+    background: #f0f4ff;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.kind-count {
+    font-size: 22px;
+    font-weight: 700;
+    color: #3b5bdb;
+}
+
+.kind-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #444;
+}
+
+.kind-desc {
+    font-size: 10px;
+    color: #888;
 }
 
 .search-row {

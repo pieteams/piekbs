@@ -21,10 +21,21 @@ WikiLoop 基于一个核心观察：**不要你以为，我要我以为**——A
 
 ```text
 wikiloop-kb/
-  raw/      权威来源；保存原始资料
-  wiki/     结构化 Markdown 知识（source-note、concept、comparison、decision）
-  schema/   知识库本地撰写规范和模板
-  index/    FTS 索引产物和查询日志
+  raw/                  权威来源 — 任意格式的原始资料。
+                        放入文件后 watcher 自动触发蒸馏。
+
+  wiki/                 结构化 Markdown 知识层（LLM 维护）。
+    source-notes/       每篇原始资料的蒸馏摘要，FTS 检索主体。
+    concepts/           跨文档综合：概念解释 / 方法论。
+    comparisons/        跨文档综合：多方案横向对比。
+    decisions/          跨文档综合：技术决策 / 选型结论。
+    _draft/             来源不足（< 2篇）的综合页，暂不索引。
+
+  schema/               知识库本地撰写规范和页面模板。
+                        编辑此目录可自定义蒸馏页面格式。
+
+  index/                生成产物（SQLite FTS 索引、查询日志）。
+                        自动管理，无需手动修改。
 ```
 
 ## Agent 如何使用 WikiLoop

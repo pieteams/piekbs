@@ -23,10 +23,21 @@ This means WikiLoop's job is not to answer questions. It is to make sure that wh
 
 ```text
 wikiloop-kb/
-  raw/      source of truth; original materials
-  wiki/     structured Markdown knowledge (source-notes, concepts, comparisons, decisions)
-  schema/   KB-local authoring rules and templates
-  index/    generated FTS index and query logs
+  raw/                  Source of truth — original materials in any format.
+                        Drop files here; the watcher auto-distills them.
+
+  wiki/                 Structured Markdown knowledge layer (LLM-maintained).
+    source-notes/       One distilled note per raw document. FTS search target.
+    concepts/           Cross-document synthesis: concepts and methodologies.
+    comparisons/        Cross-document synthesis: side-by-side comparisons.
+    decisions/          Cross-document synthesis: technical decisions.
+    _draft/             Synthesized pages with < 2 sources (not indexed yet).
+
+  schema/               KB-local authoring rules and page templates.
+                        Edit these to customize the distilled page format.
+
+  index/                Generated artifacts (SQLite FTS index, query logs).
+                        Managed automatically — do not edit manually.
 ```
 
 ## How Agents Use WikiLoop

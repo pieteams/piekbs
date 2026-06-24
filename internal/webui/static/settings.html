@@ -31,7 +31,7 @@
         <h2 data-i18n="settings.title">Settings</h2>
         <form id="settings-form">
             <div class="form-section">
-                <h3><span data-i18n="settings.distill_section">Distill (LLM)</span> <button id="deepseek-preset" class="preset-btn" type="button" data-i18n="settings.deepseek_preset">Use DeepSeek</button></h3>
+                <h3 data-i18n="settings.distill_section">Distill (LLM)</h3>
                 <div class="form-row">
                     <label for="distill-api-type" data-i18n="settings.api_type">API Type</label>
                     <select id="distill-api-type">
@@ -52,13 +52,6 @@
                 <div class="form-row">
                     <label for="distill-model" data-i18n="settings.model">Model</label>
                     <input id="distill-model" type="text" placeholder="deepseek-chat">
-                </div>
-            </div>
-            <div class="form-section">
-                <h3 data-i18n="settings.embedding_section">Embedding</h3>
-                <div class="form-row">
-                    <label for="embed-idle-timeout" data-i18n="settings.idle_timeout">Idle Unload Timeout</label>
-                    <input id="embed-idle-timeout" type="text" placeholder="5m  (e.g. 1m / 5m / 15m / never)">
                 </div>
             </div>
             <div class="form-section">
@@ -99,7 +92,6 @@ async function loadSettings() {
         if (data.distill?.token_configured) {
             document.getElementById('distill-token').placeholder = 'Configured — leave blank to keep';
         }
-        document.getElementById('embed-idle-timeout').value = data.embedding?.idle_timeout || '';
         document.getElementById('lang-select').value = data.ui?.language || 'zh';
     } catch(e) {
         errEl.textContent = 'Failed to load settings'; errEl.style.display = '';
@@ -119,7 +111,6 @@ document.getElementById('settings-form').addEventListener('submit', async e => {
     if (token) distill.token = token;
     const payload = {
         distill,
-        embedding: { idle_timeout: document.getElementById('embed-idle-timeout').value },
         ui: { language: document.getElementById('lang-select').value },
     };
     try {
@@ -140,13 +131,6 @@ document.getElementById('settings-form').addEventListener('submit', async e => {
     }
 });
 
-document.getElementById('deepseek-preset').addEventListener('click', () => {
-    document.getElementById('distill-api-type').value = 'openai';
-    document.getElementById('distill-base-url').value = 'https://api.deepseek.com';
-    document.getElementById('distill-model').value = 'deepseek-chat';
-    document.getElementById('distill-token').focus();
-});
-
 loadSettings();
 </script>
 
@@ -160,12 +144,9 @@ const I18N = {
     "settings.distill_section":  "Distill (LLM)",
     "settings.api_base_url":     "API Base URL",
     "settings.api_type":         "API Type",
-    "settings.deepseek_preset":  "Use DeepSeek",
     "settings.base_url_hint":    "Both provider roots and URLs ending in /v1 are accepted.",
     "settings.api_token":        "API Token",
     "settings.model":            "Model",
-    "settings.embedding_section":"Embedding",
-    "settings.idle_timeout":     "Idle Unload Timeout",
     "settings.language_section": "Language",
     "settings.language":         "Language",
     "settings.language_hint":    "Tray menu language takes effect after restart.",
@@ -179,12 +160,9 @@ const I18N = {
     "settings.distill_section":  "蒸馏（LLM）",
     "settings.api_base_url":     "API 地址",
     "settings.api_type":         "API 类型",
-    "settings.deepseek_preset":  "使用 DeepSeek",
     "settings.base_url_hint":    "支持服务根地址，也支持以 /v1 结尾的地址。",
     "settings.api_token":        "API Token",
     "settings.model":            "模型",
-    "settings.embedding_section":"向量嵌入",
-    "settings.idle_timeout":     "空闲卸载超时",
     "settings.language_section": "语言",
     "settings.language":         "语言",
     "settings.language_hint":    "托盘菜单语言重启后生效。",

@@ -16,18 +16,40 @@
 <div class="container">
     <div class="card" id="status-card">
         <h2 data-i18n="status.title">Knowledge Base Status</h2>
-        <div class="stat-grid">
+        <div class="status-row" id="kind-grid" style="display:none">
             <div class="stat-item">
                 <div class="stat-value" id="stat-docs">—</div>
                 <div class="stat-label" data-i18n="status.documents">Documents</div>
             </div>
             <div class="stat-item">
-                <div class="stat-value" id="stat-emb">—</div>
-                <div class="stat-label" data-i18n="status.embeddings">Embeddings</div>
-            </div>
-            <div class="stat-item">
                 <div class="stat-value" id="stat-size">—</div>
                 <div class="stat-label" data-i18n="status.index_size">Index Size</div>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="kind-item">
+                <span class="kind-count" id="kind-raw">—</span>
+                <span class="kind-label" data-i18n="status.raw">raw</span>
+                <span class="kind-desc" data-i18n="status.raw_desc">原始资料</span>
+            </div>
+            <div class="kind-item">
+                <span class="kind-count" id="kind-source-note">—</span>
+                <span class="kind-label">source-note</span>
+                <span class="kind-desc" data-i18n="status.source_note_desc">蒸馏摘要</span>
+            </div>
+            <div class="kind-item">
+                <span class="kind-count" id="kind-concept">—</span>
+                <span class="kind-label">concept</span>
+                <span class="kind-desc" data-i18n="status.concept_desc">概念综合</span>
+            </div>
+            <div class="kind-item">
+                <span class="kind-count" id="kind-comparison">—</span>
+                <span class="kind-label">comparison</span>
+                <span class="kind-desc" data-i18n="status.comparison_desc">方案对比</span>
+            </div>
+            <div class="kind-item">
+                <span class="kind-count" id="kind-decision">—</span>
+                <span class="kind-label">decision</span>
+                <span class="kind-desc" data-i18n="status.decision_desc">技术决策</span>
             </div>
         </div>
         <p id="status-error" class="error" style="display:none"></p>
@@ -47,34 +69,44 @@
 <script>
 const I18N = {
   en: {
-    "nav.home":           "Home",
-    "nav.files":          "Files",
-    "nav.settings":       "Settings",
-    "status.title":       "Knowledge Base Status",
-    "status.documents":   "Documents",
-    "status.embeddings":  "Embeddings",
-    "status.index_size":  "Index Size",
-    "search.title":       "Search",
-    "search.placeholder": "Search the knowledge base...",
-    "search.btn":         "Search",
-    "search.no_results":  "No results found",
-    "error.connect":      "Cannot connect to server",
-    "error.search_failed":"Search request failed",
+    "nav.home":              "Home",
+    "nav.files":             "Files",
+    "nav.settings":          "Settings",
+    "status.title":          "Knowledge Base Status",
+    "status.documents":      "Documents",
+    "status.index_size":     "Index Size",
+    "status.raw":            "raw",
+    "status.raw_desc":       "Source materials",
+    "status.source_note_desc": "Distilled notes",
+    "status.concept_desc":   "Concept pages",
+    "status.comparison_desc":"Comparison pages",
+    "status.decision_desc":  "Decision pages",
+    "search.title":          "Search",
+    "search.placeholder":    "Search the knowledge base...",
+    "search.btn":            "Search",
+    "search.no_results":     "No results found",
+    "error.connect":         "Cannot connect to server",
+    "error.search_failed":   "Search request failed",
   },
   zh: {
-    "nav.home":           "首页",
-    "nav.files":          "文件",
-    "nav.settings":       "设置",
-    "status.title":       "知识库状态",
-    "status.documents":   "文档数",
-    "status.embeddings":  "向量数",
-    "status.index_size":  "索引大小",
-    "search.title":       "搜索",
-    "search.placeholder": "搜索知识库…",
-    "search.btn":         "搜索",
-    "search.no_results":  "无结果",
-    "error.connect":      "无法连接服务器",
-    "error.search_failed":"搜索请求失败",
+    "nav.home":              "首页",
+    "nav.files":             "文件",
+    "nav.settings":          "设置",
+    "status.title":          "知识库状态",
+    "status.documents":      "文档总数",
+    "status.index_size":     "索引大小",
+    "status.raw":            "raw",
+    "status.raw_desc":       "原始资料",
+    "status.source_note_desc": "蒸馏摘要",
+    "status.concept_desc":   "概念综合",
+    "status.comparison_desc":"方案对比",
+    "status.decision_desc":  "技术决策",
+    "search.title":          "搜索",
+    "search.placeholder":    "搜索知识库…",
+    "search.btn":            "搜索",
+    "search.no_results":     "无结果",
+    "error.connect":         "无法连接服务器",
+    "error.search_failed":   "搜索请求失败",
   }
 };
 
@@ -106,9 +138,16 @@ async function loadStatus() {
             document.getElementById('status-error').style.display = '';
             return;
         }
-        document.getElementById('stat-docs').textContent = data.documents ?? 0;
-        document.getElementById('stat-emb').textContent = data.embeddings ?? 0;
-        document.getElementById('stat-size').textContent = fmtSize(data.index_size ?? 0);
+        const byLayer = data.by_layer || {};
+        const byKind  = data.by_kind  || {};
+        document.getElementById('stat-docs').textContent        = data.documents ?? 0;
+        document.getElementById('stat-size').textContent        = fmtSize(data.index_size ?? 0);
+        document.getElementById('kind-raw').textContent         = byLayer['raw'] ?? 0;
+        document.getElementById('kind-source-note').textContent = byKind['source-note'] ?? 0;
+        document.getElementById('kind-concept').textContent     = byKind['concept'] ?? 0;
+        document.getElementById('kind-comparison').textContent  = byKind['comparison'] ?? 0;
+        document.getElementById('kind-decision').textContent    = byKind['decision'] ?? 0;
+        document.getElementById('kind-grid').style.display = '';
     } catch(e) {
         document.getElementById('status-error').textContent = t('error.connect');
         document.getElementById('status-error').style.display = '';

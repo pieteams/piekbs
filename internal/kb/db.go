@@ -120,3 +120,30 @@ func LayerCounts(db *sql.DB) (map[string]int, int, error) {
 	}
 	return byLayer, total, rows.Err()
 }
+
+// KindCounts queries document counts broken down by kind within the wiki layer.
+// Returns map of kind→count for source-note, concept, comparison, decision.
+func KindCounts(db *sql.DB) (map[string]int, error) {
+	rows, err := db.Query(
+		"SELECT COALESCE(kind,'source-note'), COUNT(*) FROM documents WHERE layer='wiki' GROUP BY kind")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	counts := map[string]int{
+		"source-note": 0,
+		"concept":     0,
+		"comparison":  0,
+		"decision":    0,
+	}
+	for rows.Next() {
+		var kind string
+		var n int
+		if err := rows.Scan(&kind, &n); err != nil {
+			return nil, err
+		}
+		counts[kind] = n
+	}
+	return counts, rows.Err()
+}

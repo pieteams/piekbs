@@ -6,7 +6,7 @@
     <title>Files — WikiLoop</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        body > .container { max-width: 1200px; }
+        body > .container { max-width: 80%; }
     </style>
 </head>
 <body>
@@ -17,23 +17,25 @@
     <a href="/settings" data-i18n="nav.settings">Settings</a>
 </nav>
 <div class="container">
-    <div class="card">
-        <h2 data-i18n="files.lark_title">Import Lark / Feishu Wiki</h2>
-        <div style="display:flex;gap:8px">
-            <input id="lark-url" type="url" placeholder="https://example.larkoffice.com/wiki/..." style="flex:1;padding:9px 12px;border:1px solid #d0d7de;border-radius:6px;font-size:14px">
-            <button id="lark-import-btn" data-i18n="files.lark_import" style="padding:9px 18px;background:#0969da;color:#fff;border:0;border-radius:6px;cursor:pointer">Import</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="card" style="margin:0">
+            <h2 data-i18n="files.lark_title">Import Lark / Feishu Wiki</h2>
+            <div style="display:flex;gap:8px">
+                <input id="lark-url" type="url" placeholder="https://example.larkoffice.com/wiki/..." style="flex:1;padding:9px 12px;border:1px solid #d0d7de;border-radius:6px;font-size:14px">
+                <button id="lark-import-btn" data-i18n="files.lark_import" style="padding:9px 18px;background:#0969da;color:#fff;border:0;border-radius:6px;cursor:pointer">Import</button>
+            </div>
+            <p data-i18n="files.lark_hint" style="font-size:12px;color:#6e7781;margin-bottom:0">Embedded Base tables are imported in full and become searchable. Requires a logged-in lark-cli user on this Mac.</p>
+            <div id="lark-import-status" style="margin-top:10px;font-size:13px"></div>
         </div>
-        <p data-i18n="files.lark_hint" style="font-size:12px;color:#6e7781;margin-bottom:0">Embedded Base tables are imported in full and become searchable. Requires a logged-in lark-cli user on this Mac.</p>
-        <div id="lark-import-status" style="margin-top:10px;font-size:13px"></div>
-    </div>
-    <div class="card">
-        <h2 data-i18n="files.upload_title">Upload Files</h2>
-        <div id="drop-zone" style="border:2px dashed #ccc;border-radius:8px;padding:32px;text-align:center;color:#888;cursor:pointer;margin-bottom:16px;transition:border-color .2s,background .2s">
-            <div style="font-size:36px;margin-bottom:8px">📂</div>
-            <div data-i18n="files.drop_hint">Drop files here, or <label for="file-input" style="color:#0969da;cursor:pointer;text-decoration:underline" data-i18n="files.browse">browse</label></div>
-            <input id="file-input" type="file" multiple style="display:none">
+        <div class="card" style="margin:0">
+            <h2 data-i18n="files.upload_title">Upload Files</h2>
+            <div id="drop-zone" style="display:flex;align-items:center;gap:8px;border:2px dashed #ccc;border-radius:8px;padding:12px 16px;color:#888;cursor:pointer;margin-bottom:16px;transition:border-color .2s,background .2s">
+                <span style="font-size:22px">📂</span>
+                <span data-i18n="files.drop_hint">Drop files here, or <label for="file-input" style="color:#0969da;cursor:pointer;text-decoration:underline" data-i18n="files.browse">browse</label></span>
+                <input id="file-input" type="file" multiple style="display:none">
+            </div>
+            <div id="upload-status" style="margin-bottom:12px;font-size:13px"></div>
         </div>
-        <div id="upload-status" style="margin-bottom:12px;font-size:13px"></div>
     </div>
     <div class="card">
         <h2><span data-i18n="files.raw_title">Raw Files</span> <span id="files-count" style="font-weight:400;color:#888;font-size:13px"></span></h2>
@@ -118,7 +120,7 @@ function t(key) {
 </script>
 
 <script>
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 let allFiles = [];
 let currentPage = 1;
 
