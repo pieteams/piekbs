@@ -269,28 +269,77 @@ func rewritePage(cfg Config, kbRoot, destPath string, p PagePlan) error {
 	return os.WriteFile(destPath, []byte(updated), 0o644)
 }
 
+const draftThreshold = 2 // source_count < draftThreshold → _draft/
+
+// resolveDestPath returns the destination file path and whether it goes to _draft/.
+// New pages with fewer sources than draftThreshold are written to _draft/.
+// Existing pages (already on disk) keep their current location.
+func resolveDestPath(kbRoot string, p PagePlan) (dest string, isDraft bool) {
+	formalPath := filepath.Join(kbRoot, "wiki", p.Type+"s", p.Slug+".md")
+	draftPath := filepath.Join(kbRoot, "wiki", p.Type+"s", "_draft", p.Slug+".md")
+
+	// If page already exists (either location), keep its current location.
+	if _, err := os.Stat(formalPath); err == nil {
+		return formalPath, false
+	}
+	if _, err := os.Stat(draftPath); err == nil {
+		return draftPath, true
+	}
+
+	// New page: check source count.
+	if len(p.Sources) < draftThreshold {
+		return draftPath, true
+	}
+	return formalPath, false
+}
+
+// graduateFromDraft moves a page from _draft/ to the formal directory
+// when its source_count reaches draftThreshold.
+func graduateFromDraft(kbRoot string, p PagePlan, draftPath string) error {
+	data, err := os.ReadFile(draftPath)
+	if err != nil {
+		return nil
+	}
+	if extractSourceCount(data) < draftThreshold {
+		return nil // not ready yet
+	}
+	formalPath := filepath.Join(kbRoot, "wiki", p.Type+"s", p.Slug+".md")
+	if err := os.MkdirAll(filepath.Dir(formalPath), 0o755); err != nil {
+		return err
+	}
+	if err := os.Rename(draftPath, formalPath); err != nil {
+		return err
+	}
+	return nil
+}
+
 // AppendOrCreate either appends new source-note content to an existing wiki page
 // (matched by slug) or creates a new one. Silently skips if cfg is not configured.
 func AppendOrCreate(cfg Config, kbRoot string, p PagePlan) error {
 	if !cfg.IsConfigured() {
 		return nil
 	}
-	dest := filepath.Join(kbRoot, "wiki", p.Type+"s", p.Slug+".md")
+	dest, isDraft := resolveDestPath(kbRoot, p)
+	_ = isDraft // used only for path resolution
+
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 		return err
 	}
 
 	if _, err := os.Stat(dest); err == nil {
-		// Page exists — check if rewrite is needed (source_count >= 5).
 		existing, readErr := os.ReadFile(dest)
 		if readErr == nil && extractSourceCount(existing)+len(p.Sources) >= 5 {
-			// Rewrite: reorganise using existing page content + new sources.
-			// No need to re-read original raw articles — the existing page
-			// already contains distilled summaries of previous sources.
 			return rewritePage(cfg, kbRoot, dest, p)
 		}
-		// Append mode.
-		return appendToPage(cfg, kbRoot, dest, p)
+		err := appendToPage(cfg, kbRoot, dest, p)
+		if err != nil {
+			return err
+		}
+		// After append, check if draft page should graduate to formal.
+		if _, stillDraft := resolveDestPath(kbRoot, p); stillDraft {
+			_ = graduateFromDraft(kbRoot, p, dest)
+		}
+		return nil
 	}
 
 	// New page.

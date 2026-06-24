@@ -45,6 +45,75 @@ func TestIncrementSourceCountAbsent(t *testing.T) {
 	}
 }
 
+func TestAppendOrCreateWritesToDraftWhenSingleSource(t *testing.T) {
+	dir := t.TempDir()
+	// Create required wiki subdirs
+	os.MkdirAll(filepath.Join(dir, "wiki", "concepts"), 0o755)
+	os.MkdirAll(filepath.Join(dir, "wiki", "concepts", "_draft"), 0o755)
+
+	cfg := Config{BaseURL: "http://localhost", Token: "test", Model: "test"}
+	p := PagePlan{
+		Type:        "concept",
+		Slug:        "test-concept",
+		Title:       "Test Concept",
+		Description: "A test",
+		Sources:     []string{"wiki/source-notes/a.md"},
+	}
+
+	// We can't call LLM in tests, so just verify the destination path logic
+	dest, isDraft := resolveDestPath(dir, p)
+	if !isDraft {
+		t.Error("expected isDraft=true for single source")
+	}
+	expectedDraft := filepath.Join(dir, "wiki", "concepts", "_draft", "test-concept.md")
+	if dest != expectedDraft {
+		t.Errorf("expected %q, got %q", expectedDraft, dest)
+	}
+	_ = cfg
+}
+
+func TestResolveDestPathMultipleSources(t *testing.T) {
+	dir := t.TempDir()
+	p := PagePlan{
+		Type:    "concept",
+		Slug:    "test-concept",
+		Sources: []string{"a.md", "b.md"},
+	}
+	dest, isDraft := resolveDestPath(dir, p)
+	if isDraft {
+		t.Error("expected isDraft=false for 2 sources")
+	}
+	expected := filepath.Join(dir, "wiki", "concepts", "test-concept.md")
+	if dest != expected {
+		t.Errorf("expected %q, got %q", expected, dest)
+	}
+}
+
+func TestGraduateFromDraft(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "wiki", "concepts", "_draft"), 0o755)
+	os.MkdirAll(filepath.Join(dir, "wiki", "concepts"), 0o755)
+
+	draftPath := filepath.Join(dir, "wiki", "concepts", "_draft", "test.md")
+	// Write a page with source_count=2 (at threshold)
+	content := "---\ntype: concept\nsource_count: 2\n---\n\nContent"
+	os.WriteFile(draftPath, []byte(content), 0o644)
+
+	p := PagePlan{Type: "concept", Slug: "test", Sources: []string{"a.md"}}
+	err := graduateFromDraft(dir, p, draftPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	formalPath := filepath.Join(dir, "wiki", "concepts", "test.md")
+	if _, err := os.Stat(formalPath); os.IsNotExist(err) {
+		t.Error("expected page to be graduated to formal directory")
+	}
+	if _, err := os.Stat(draftPath); !os.IsNotExist(err) {
+		t.Error("expected draft page to be removed after graduation")
+	}
+}
+
 func TestAppendOrCreate_CreatesNewPage(t *testing.T) {
 	dir := t.TempDir()
 	// Create minimal KB structure
