@@ -168,3 +168,29 @@ func TestFTSSearch_CommaKeywords(t *testing.T) {
 		t.Errorf("got %d results, want ≥2", len(results))
 	}
 }
+
+func TestHybridRankSynthesizedBoostIsMultiplicative(t *testing.T) {
+	fts := []SearchResult{
+		{ID: "a", Kind: "source-note", FTSRank: -1.0},
+		{ID: "b", Kind: "concept", FTSRank: -1.0},
+	}
+	result := HybridRank(fts, nil, nil, nil)
+	var aScore, bScore float64
+	for _, r := range result {
+		if r.ID == "a" {
+			aScore = r.HybridScore
+		}
+		if r.ID == "b" {
+			bScore = r.HybridScore
+		}
+	}
+	// concept should score higher than source-note due to 1.3x multiplier
+	if bScore <= aScore {
+		t.Errorf("concept score (%f) should be > source-note score (%f)", bScore, aScore)
+	}
+	// verify multiplicative: bScore should be ~1.3x aScore (before authority/graph adjustments)
+	ratio := bScore / aScore
+	if ratio < 1.2 || ratio > 1.5 {
+		t.Errorf("expected multiplicative ratio ~1.3, got %f", ratio)
+	}
+}

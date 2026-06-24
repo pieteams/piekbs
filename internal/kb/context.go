@@ -2,6 +2,10 @@
 
 package kb
 
+// Deprecated: BuildContext is superseded by the SearchLayered + FetchPages pattern
+// (kb_search + kb_page MCP tools). Kept for reference.
+// Delete after kb_page has been stable for 30 days.
+
 import (
 	"database/sql"
 	"strings"

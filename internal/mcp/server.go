@@ -13,56 +13,48 @@ import (
 	mcpserver "github.com/mark3labs/mcp-go/server"
 )
 
-const serverInstructions = `WikiLoop is a persistent, cross-session knowledge base for this project. It stores
-distilled wiki pages, the raw source documents they cite, a concept graph linking
-related pages, and recorded conflicts between sources. It is the project's long-term
-memory: design decisions, specs, roadmaps/phase plans, past approaches, incident
-notes, and the "why" behind the code — knowledge that is NOT recoverable by reading
-the current code or git history.
+const serverInstructions = `WikiLoop is a knowledge search engine for this project. It stores distilled
+wiki pages (source-notes, concepts, comparisons, decisions) and the raw source
+documents they cite. Use it like a search engine: search with multiple keyword
+combinations to discover relevant documents, then deep-read the ones that matter.
 
-WHEN TO USE WikiLoop (prefer it over guessing or relying on the code alone):
+WikiLoop provides MATERIALS for you to synthesize — it does not generate answers.
+You are expected to search iteratively, cross-verify with other sources, and form
+your own conclusions.
+
+WHEN TO USE WikiLoop:
   - The user asks "why did we…", "how was this designed", "what was the plan/spec".
-  - You are about to change architecture, a protocol, an index/KB, or other
-    long-lived design, and need the original rationale or constraints.
-  - You need project background, requirements provenance, or roadmap/phase context
-    that the code does not explain on its own.
-  - Your answer would shape a long-term decision and you are not certain of the
-    background.
+  - You need project background, design decisions, or rationale not in the code.
   - You suspect prior art exists ("have we solved this before?").
 
 HOW TO USE:
-  - Start with kb_context(question=…) for a ready-to-use bundle: relevant wiki
-    pages + the raw sources they cite + graph neighbors + known conflicts. This is
-    the primary entry point for "give me the background on X".
-  - Use kb_search(query=…) when you want to browse ranked hits or scope to a layer
-    (wiki / raw / schema).
-  - kb_status reports index health; kb_reindex refreshes the FTS index after the
-    KB files change.
+  1. kb_search(query=…) — Search with a keyword or phrase. Returns up to 5
+     source-notes + 3 concept/comparison/decision pages. Each result includes
+     related documents for further navigation.
+  2. Repeat kb_search with DIFFERENT keywords to cover the topic from multiple
+     angles. Do NOT repeat the same query — switch keywords or topic angle.
+  3. kb_page(ids=[…]) — Deep-read documents of interest using IDs from
+     kb_search results. Pass multiple IDs (up to 5) to scan several at once,
+     or use full=true with a single ID to get complete untruncated text.
 
-QUERY EXPANSION (mandatory before every search):
-  Before calling kb_context or kb_search, expand the user's query into all known
-  aliases, abbreviations, and cross-language equivalents, then search for each variant
-  or combine them. The KB uses FTS (full-text search), so exact term matching matters.
+QUERY EXPANSION (mandatory):
+  Before searching, expand the query into aliases, abbreviations, and
+  cross-language equivalents. FTS uses exact term matching.
   Examples:
-    "召回率" → also search "recall rate", "Context Recall", "CR", "检索覆盖"
-    "手机物料" → also search "mobile material", "M17", "mdm_mobile_mat", "物料主数据"
-    "蒸馏" → also search "distill", "distillation", "source-note", "知识蒸馏"
-  You already know the domain — use that knowledge to expand queries before searching.
-  Do NOT search only the literal user term; always include at least 2-3 variants.
+    "召回率" → also search "recall", "Context Recall", "CR"
+    "蒸馏"   → also search "distill", "source-note", "知识蒸馏"
+    "向量数据库" → also search "vector database", "vector store", "Qdrant", "Milvus"
 
-DO NOT use WikiLoop for questions answerable from the current code, file structure,
-or git history — read those directly instead. WikiLoop is read-only knowledge; it
-does not reflect uncommitted local edits.
+DO NOT:
+  - Repeat the same query — it returns identical results, switch keywords instead
+  - Expect WikiLoop to give you the answer — synthesize from what you find
+  - Use WikiLoop for questions answerable from current code or git history
 
 CITATION RULES (mandatory):
-  - When answering from kb_context or kb_search results, ALWAYS cite the source
-    paths in your answer. Use the path field from wiki_pages and raw_sources.
-    Example: "According to [wiki/concepts/rag-optimization.md], ..."
-  - If the retrieved context does not contain enough information to answer,
-    say so explicitly: "The knowledge base does not contain sufficient information
-    on this topic." Do NOT generate answers beyond what the context supports.
-  - If a conflict is reported in the results, acknowledge it: cite both sides
-    and note that the sources disagree.`
+  - Always cite source paths in your answer using the id/path field.
+    Example: "According to [wiki/source-notes/xxx.md], ..."
+  - If context is insufficient, say so explicitly rather than hallucinating.
+  - If a conflict appears in results, acknowledge both sides.`
 
 // Start creates an MCP HTTP server, registers KB tools, and listens on addr.
 // apiKey is reserved for future auth middleware; currently unused.
@@ -133,21 +125,22 @@ func registerTools(s *mcpserver.MCPServer, kbRoot string, embedder kb.Embedder) 
 		return toolResultJSON(data)
 	})
 
-	// kb_context ─────────────────────────────────────────────────────────────
-	contextTool := mcp.NewTool("kb_context",
-		mcp.WithDescription("Build a ready-to-use context bundle for a question: wiki pages, raw sources, graph neighbors, conflicts."),
-		mcp.WithString("question", mcp.Required(), mcp.Description("Question to build context for")),
-		mcp.WithNumber("limit", mcp.Description("Maximum wiki pages (default 10)")),
-		mcp.WithBoolean("no_vec", mcp.Description("Disable vector search (default false)")),
-	)
-	s.AddTool(contextTool, func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		question := req.GetString("question", "")
-		limit := req.GetInt("limit", 10)
-		noVec := req.GetBool("no_vec", false)
-
-		data := handleKBContext(kbRoot, question, limit, noVec, embedder)
-		return toolResultJSON(data)
-	})
+	// kb_context is superseded by kb_search + kb_page pattern.
+	// Kept commented for reference. Remove after kb_page has been stable for 30 days.
+	// contextTool := mcp.NewTool("kb_context",
+	// 	mcp.WithDescription("Build a ready-to-use context bundle for a question: wiki pages, raw sources, graph neighbors, conflicts."),
+	// 	mcp.WithString("question", mcp.Required(), mcp.Description("Question to build context for")),
+	// 	mcp.WithNumber("limit", mcp.Description("Maximum wiki pages (default 10)")),
+	// 	mcp.WithBoolean("no_vec", mcp.Description("Disable vector search (default false)")),
+	// )
+	// s.AddTool(contextTool, func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// 	question := req.GetString("question", "")
+	// 	limit := req.GetInt("limit", 10)
+	// 	noVec := req.GetBool("no_vec", false)
+	//
+	// 	data := handleKBContext(kbRoot, question, limit, noVec, embedder)
+	// 	return toolResultJSON(data)
+	// })
 
 	// kb_page ─────────────────────────────────────────────────────────────────
 	pageTool := mcp.NewTool("kb_page",

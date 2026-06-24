@@ -469,6 +469,38 @@ func SearchLayered(db *sql.DB, kbRoot, query string, layer, kind *string, source
 	return combined, conflicts, nil
 }
 
+// HybridRank performs hybrid FTS search and applies RRF scoring with
+// synthesizedBoost (multiplicative 1.3x for concept/comparison/decision)
+// and authority adjustments. Returns results sorted by HybridScore descending.
+// graph may be nil; embedder may be nil (FTS-only mode).
+func HybridRank(fts []SearchResult, graph map[string]float64, conflicts []Conflict, embedder Embedder) []SearchResult {
+	results := make([]SearchResult, len(fts))
+	copy(results, fts)
+
+	for i := range results {
+		rrfScore := 1.0 / (rrfK + float64(i+1))
+		switch results[i].Kind {
+		case "concept", "comparison", "decision":
+			rrfScore *= 1.3
+		}
+		if graph != nil {
+			if boost, ok := graph[results[i].ID]; ok {
+				rrfScore += boost * 0.01
+			}
+		}
+		if results[i].Authority > 0 {
+			rrfScore += float64(results[i].Authority-3) * 0.005
+		}
+		results[i].HybridScore = rrfScore
+	}
+
+	// Sort by HybridScore descending.
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].HybridScore > results[j].HybridScore
+	})
+	return results
+}
+
 // Search performs hybrid FTS search over the documents table.
 // Always performs GraphExpand and ConflictLinks on the result set.
 func Search(db *sql.DB, kbRoot string, query string, layer *string, limit int, embedder Embedder) ([]SearchResult, []GraphNeighbor, []Conflict, error) {
