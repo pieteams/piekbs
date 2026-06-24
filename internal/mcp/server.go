@@ -100,17 +100,15 @@ func registerTools(s *mcpserver.MCPServer, kbRoot string, embedder kb.Embedder) 
 
 	// kb_search ──────────────────────────────────────────────────────────────
 	searchTool := mcp.NewTool("kb_search",
-		mcp.WithDescription("Search the WikiLoop knowledge base (hybrid FTS + vector) and return ranked results."),
+		mcp.WithDescription("Search the WikiLoop knowledge base (FTS) and return ranked results."),
 		mcp.WithString("query", mcp.Required(), mcp.Description("Search query")),
 		mcp.WithString("layer", mcp.Description("Filter layer: wiki, raw, or schema")),
 		mcp.WithString("kind", mcp.Description("Filter page kind: source-note, concept, comparison, decision")),
 		mcp.WithNumber("limit", mcp.Description("Maximum results (default 10)")),
-		mcp.WithBoolean("no_vec", mcp.Description("Disable vector search (default false)")),
 	)
 	s.AddTool(searchTool, func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		query := req.GetString("query", "")
 		limit := req.GetInt("limit", 10)
-		noVec := req.GetBool("no_vec", false)
 
 		var layer *string
 		if l := req.GetString("layer", ""); l != "" {
@@ -121,7 +119,7 @@ func registerTools(s *mcpserver.MCPServer, kbRoot string, embedder kb.Embedder) 
 			kind = &k
 		}
 
-		data := handleKBSearch(kbRoot, query, layer, kind, limit, noVec, embedder)
+		data := handleKBSearch(kbRoot, query, layer, kind, limit)
 		return toolResultJSON(data)
 	})
 

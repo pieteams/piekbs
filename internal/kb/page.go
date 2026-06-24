@@ -55,6 +55,9 @@ func FetchPages(db *sql.DB, kbRoot string, ids []string, full bool) ([]PageResul
 			docs = append(docs, d)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
 	var results []PageResult
 	for _, d := range docs {

@@ -479,8 +479,7 @@ func HybridRank(fts []SearchResult, graph map[string]float64, conflicts []Confli
 
 	for i := range results {
 		rrfScore := 1.0 / (rrfK + float64(i+1))
-		switch results[i].Kind {
-		case "concept", "comparison", "decision":
+		if isSynthesizedKind(results[i].Kind) {
 			rrfScore *= 1.3
 		}
 		if graph != nil {

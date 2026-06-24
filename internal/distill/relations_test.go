@@ -13,7 +13,6 @@ type mockEmbedder struct{}
 func (m mockEmbedder) Encode(text string) ([]float32, error) {
 	return []float32{0.1, 0.2, 0.3}, nil
 }
-func (m mockEmbedder) Dimension() int { return 3 }
 
 func TestFindRelatedNotes_NoVecIndex(t *testing.T) {
 	// When there is no vec index, findRelatedNotes should return empty string.

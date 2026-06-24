@@ -72,8 +72,7 @@ func handleKBStatus(kbRoot string) map[string]interface{} {
 }
 
 // handleKBSearch runs layered FTS search and returns results with related docs.
-// noVec and embedder are retained for interface compatibility; vector search is no longer used.
-func handleKBSearch(kbRoot, query string, layer, kind *string, limit int, noVec bool, embedder kb.Embedder) map[string]interface{} {
+func handleKBSearch(kbRoot, query string, layer, kind *string, limit int) map[string]interface{} {
 	appendQueryLog(kbRoot, "kb_search", query)
 	db, err := kb.OpenDB(kbRoot)
 	if err != nil {

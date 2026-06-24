@@ -83,7 +83,7 @@ func TestHandleKBSearch(t *testing.T) {
 		t.Fatalf("index files: %v", err)
 	}
 
-	result := handleKBSearch(dir, "search", nil, nil, 10, true, nil)
+	result := handleKBSearch(dir, "search", nil, nil, 10)
 
 	if errMsg, hasErr := result["error"]; hasErr {
 		t.Fatalf("unexpected error: %v", errMsg)
