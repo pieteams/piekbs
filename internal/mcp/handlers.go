@@ -71,8 +71,8 @@ func handleKBStatus(kbRoot string) map[string]interface{} {
 	}
 }
 
-// handleKBSearch runs FTS (+ optional vector) search and returns results.
-// noVec=true skips vector search even when an embedder is available.
+// handleKBSearch runs layered FTS search and returns results with related docs.
+// noVec and embedder are retained for interface compatibility; vector search is no longer used.
 func handleKBSearch(kbRoot, query string, layer, kind *string, limit int, noVec bool, embedder kb.Embedder) map[string]interface{} {
 	appendQueryLog(kbRoot, "kb_search", query)
 	db, err := kb.OpenDB(kbRoot)
@@ -81,19 +81,23 @@ func handleKBSearch(kbRoot, query string, layer, kind *string, limit int, noVec 
 	}
 	defer db.Close()
 
-	var emb kb.Embedder
-	if !noVec {
-		emb = embedder
+	sourceLimit := limit
+	if sourceLimit <= 0 {
+		sourceLimit = 5
 	}
-	results, graphPages, conflicts, err := kb.SearchFiltered(db, kbRoot, query, layer, kind, limit, emb)
+	synthLimit := min(3, sourceLimit/2)
+	if synthLimit < 1 {
+		synthLimit = 1
+	}
+
+	results, conflicts, err := kb.SearchLayered(db, kbRoot, query, layer, kind, sourceLimit, synthLimit)
 	if err != nil {
 		return map[string]interface{}{"error": err.Error()}
 	}
 
 	return map[string]interface{}{
-		"results":     results,
-		"graph_pages": graphPages,
-		"conflicts":   conflicts,
+		"results":   results,
+		"conflicts": conflicts,
 	}
 }
 

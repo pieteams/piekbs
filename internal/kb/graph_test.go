@@ -120,3 +120,26 @@ func TestConflictLinks(t *testing.T) {
 		t.Errorf("expected a 'contradicts' conflict, got: %v", conflicts)
 	}
 }
+
+func TestFetchRelated(t *testing.T) {
+	db := newTestDB(t)
+	// Insert two docs and a link between them (content/content_hash/updated_at required)
+	now := int64(1700000000)
+	db.Exec(`INSERT INTO documents(id,path,layer,kind,title,content,content_hash,updated_at) VALUES(?,?,?,?,?,?,?,?)`,
+		"wiki/source-notes/a.md", "wiki/source-notes/a.md", "wiki", "source-note", "Doc A", "body", "hash1", now)
+	db.Exec(`INSERT INTO documents(id,path,layer,kind,title,content,content_hash,updated_at) VALUES(?,?,?,?,?,?,?,?)`,
+		"wiki/concepts/b.md", "wiki/concepts/b.md", "wiki", "concept", "Doc B", "body", "hash2", now)
+	db.Exec(`INSERT INTO links(source_doc_id,target_doc_id,relation,confidence) VALUES(?,?,?,?)`,
+		"wiki/source-notes/a.md", "wiki/concepts/b.md", "related_to", 1.0)
+
+	related := FetchRelated(db, "wiki/source-notes/a.md", 3)
+	if len(related) != 1 {
+		t.Fatalf("expected 1 related doc, got %d", len(related))
+	}
+	if related[0].ID != "wiki/concepts/b.md" {
+		t.Fatalf("expected 'wiki/concepts/b.md', got %q", related[0].ID)
+	}
+	if related[0].Kind != "concept" {
+		t.Fatalf("expected kind 'concept', got %q", related[0].Kind)
+	}
+}

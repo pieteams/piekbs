@@ -172,6 +172,45 @@ AND (source_doc_id IN (` + ph + `) OR target_doc_id IN (` + ph + `))`
 	return conflicts
 }
 
+// FetchRelated returns related wiki documents for a given document ID.
+// It queries both outbound (related_to/supports/cites/wikilink) and
+// inbound (supports/wikilink) edges, filters to wiki layer, and returns
+// at most limit results.
+func FetchRelated(db *sql.DB, docID string, limit int) []RelatedDoc {
+	if docID == "" || limit <= 0 {
+		return nil
+	}
+	query := `
+SELECT DISTINCT d.id, COALESCE(d.kind,''), COALESCE(d.title,'')
+FROM documents d
+WHERE d.layer = 'wiki' AND d.id != ? AND (
+    d.id IN (
+        SELECT target_doc_id FROM links
+        WHERE source_doc_id = ?
+        AND relation IN ('related_to','supports','cites','wikilink')
+    ) OR d.id IN (
+        SELECT source_doc_id FROM links
+        WHERE target_doc_id = ?
+        AND relation IN ('supports','wikilink')
+    )
+)
+ORDER BY d.kind, d.title
+LIMIT ?`
+	rows, err := db.Query(query, docID, docID, docID, limit)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var result []RelatedDoc
+	for rows.Next() {
+		var r RelatedDoc
+		if err := rows.Scan(&r.ID, &r.Kind, &r.Title); err == nil {
+			result = append(result, r)
+		}
+	}
+	return result
+}
+
 // placeholders returns a comma-separated string of n "?" placeholders.
 func placeholders(n int) string {
 	if n == 0 {

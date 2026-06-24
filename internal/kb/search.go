@@ -5,6 +5,7 @@ package kb
 import (
 	"database/sql"
 	"regexp"
+	"sort"
 	"strings"
 	"unicode/utf8"
 )
@@ -15,23 +16,33 @@ type Embedder interface {
 	Encode(text string) ([]float32, error)
 }
 
+// RelatedDoc is a lightweight reference to a related wiki document,
+// embedded in SearchResult for graph navigation.
+type RelatedDoc struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	Kind  string `json:"kind"`
+}
+
 // SearchResult holds a single result from FTS or hybrid search.
 type SearchResult struct {
-	ID           string  `json:"id"`
-	DocID        string  `json:"doc_id,omitempty"` // parent doc ID when result is a chunk
-	Path         string  `json:"path"`
-	Layer        string  `json:"layer"`
-	Kind         string  `json:"kind"`
-	Title        string  `json:"title"`
-	Description  string  `json:"description,omitempty"`
-	Snippet      string  `json:"snippet,omitempty"`
-	WikiPriority float64 `json:"wiki_priority"`
-	Authority    int     `json:"authority,omitempty"`
-	FTSRank      float64 `json:"fts_rank,omitempty"`
-	FTSScore     float64 `json:"fts_score,omitempty"`
-	VecScore     float64 `json:"vec_score,omitempty"`
-	HybridScore  float64 `json:"hybrid_score,omitempty"`
-	GraphBoost   float64 `json:"graph_boost,omitempty"`
+	ID           string       `json:"id"`
+	DocID        string       `json:"doc_id,omitempty"` // parent doc ID when result is a chunk
+	Path         string       `json:"path"`
+	Layer        string       `json:"layer"`
+	Kind         string       `json:"kind"`
+	Title        string       `json:"title"`
+	Description  string       `json:"description,omitempty"`
+	Snippet      string       `json:"snippet,omitempty"`
+	WikiPriority float64      `json:"wiki_priority"`
+	Authority    int          `json:"authority,omitempty"`
+	FTSRank      float64      `json:"fts_rank,omitempty"`
+	FTSScore     float64      `json:"fts_score,omitempty"`
+	VecScore     float64      `json:"vec_score,omitempty"`
+	HybridScore  float64      `json:"hybrid_score,omitempty"`
+	GraphBoost   float64      `json:"graph_boost,omitempty"`
+	Related      []RelatedDoc `json:"related,omitempty"`
+	Conflicts    []string     `json:"conflicts,omitempty"`
 }
 
 // minTrigramLen is the minimum token length for FTS5 trigram tokenizer.
@@ -395,6 +406,68 @@ func multiKindFTS(db *sql.DB, query string, layer, kind *string, limit int) ([]S
 }
 
 func strPtr(s string) *string { return &s }
+
+// SearchLayered runs FTS search and returns source-notes and synthesized pages
+// in separate quota pools. sourceLimit caps source-note results; synthLimit caps
+// concept/comparison/decision results. Related docs are attached to each result.
+func SearchLayered(db *sql.DB, kbRoot, query string, layer, kind *string, sourceLimit, synthLimit int) ([]SearchResult, []Conflict, error) {
+	fetchLimit := (sourceLimit + synthLimit) * 4
+	ftsResults, err := multiKindFTS(db, query, layer, kind, fetchLimit)
+	if err != nil {
+		return nil, nil, err
+	}
+	results := applyGraphBoost(db, ftsResults)
+
+	// Apply synthesizedBoost (multiplicative) and authorityBoost.
+	for i := range results {
+		score := 1.0 / (rrfK + float64(i+1)) // base FTS rank score
+		if isSynthesizedKind(results[i].Kind) {
+			score *= 1.3
+		}
+		if results[i].Authority > 0 {
+			score += float64(results[i].Authority-3) * 0.005
+		}
+		score += results[i].GraphBoost * 0.01
+		results[i].HybridScore = score
+	}
+
+	// Sort by HybridScore descending.
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].HybridScore > results[j].HybridScore
+	})
+
+	// Split into source-notes and synthesized, cap each pool.
+	var notes, synth []SearchResult
+	for _, r := range results {
+		if isSynthesizedKind(r.Kind) {
+			if len(synth) < synthLimit {
+				synth = append(synth, r)
+			}
+		} else {
+			if len(notes) < sourceLimit {
+				notes = append(notes, r)
+			}
+		}
+		if len(notes) >= sourceLimit && len(synth) >= synthLimit {
+			break
+		}
+	}
+
+	// Attach related docs to each result.
+	combined := append(notes, synth...)
+	for i := range combined {
+		combined[i].Related = FetchRelated(db, combined[i].ID, 3)
+	}
+
+	// Collect conflict links.
+	ids := make([]string, len(combined))
+	for i, r := range combined {
+		ids[i] = r.ID
+	}
+	conflicts := ConflictLinks(db, ids)
+
+	return combined, conflicts, nil
+}
 
 // Search performs hybrid FTS search over the documents table.
 // Always performs GraphExpand and ConflictLinks on the result set.

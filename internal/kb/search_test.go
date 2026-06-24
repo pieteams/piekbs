@@ -4,10 +4,39 @@ package kb
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+// newTestDB creates a temporary kb database for use in tests.
+func newTestDB(t *testing.T) *sql.DB {
+	t.Helper()
+	dir := setupTestKB(t)
+	db, err := OpenDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+	return db
+}
+
+func TestSearchResultHasRelatedField(t *testing.T) {
+	r := SearchResult{
+		ID:    "wiki/source-notes/test.md",
+		Title: "Test",
+	}
+	r.Related = []RelatedDoc{
+		{ID: "wiki/concepts/test-concept.md", Title: "Test Concept", Kind: "concept"},
+	}
+	if len(r.Related) != 1 {
+		t.Fatalf("expected 1 related doc, got %d", len(r.Related))
+	}
+	if r.Related[0].Kind != "concept" {
+		t.Fatalf("expected kind 'concept', got %q", r.Related[0].Kind)
+	}
+}
 
 func setupSearchTest(t *testing.T) (string, *sql.DB) {
 	t.Helper()
@@ -51,6 +80,42 @@ func setupSearchTest(t *testing.T) (string, *sql.DB) {
 	}
 
 	return dir, db
+}
+
+func TestSearchLayeredSeparatesKinds(t *testing.T) {
+	db := newTestDB(t)
+	// Insert 6 source-notes and 4 concept pages all matching "RAG"
+	for i := 0; i < 6; i++ {
+		id := fmt.Sprintf("wiki/source-notes/rag-%d.md", i)
+		db.Exec(`INSERT INTO documents(id,path,layer,kind,title,content,content_hash,updated_at,wiki_priority) VALUES(?,?,?,?,?,?,?,?,?)`,
+			id, id, "wiki", "source-note", fmt.Sprintf("RAG source %d", i), "RAG content", fmt.Sprintf("h%d", i), int64(1700000000+i), 1.0)
+	}
+	for i := 0; i < 4; i++ {
+		id := fmt.Sprintf("wiki/concepts/rag-%d.md", i)
+		db.Exec(`INSERT INTO documents(id,path,layer,kind,title,content,content_hash,updated_at,wiki_priority) VALUES(?,?,?,?,?,?,?,?,?)`,
+			id, id, "wiki", "concept", fmt.Sprintf("RAG concept %d", i), "RAG content", fmt.Sprintf("c%d", i), int64(1700000000+i), 1.0)
+	}
+	// rebuild FTS
+	db.Exec(`INSERT INTO document_fts(document_fts) VALUES('rebuild')`)
+
+	results, _, err := SearchLayered(db, "", "RAG", nil, nil, 5, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var noteCount, synthCount int
+	for _, r := range results {
+		if r.Kind == "source-note" {
+			noteCount++
+		} else {
+			synthCount++
+		}
+	}
+	if noteCount > 5 {
+		t.Errorf("source-notes should be capped at 5, got %d", noteCount)
+	}
+	if synthCount > 3 {
+		t.Errorf("synthesized pages should be capped at 3, got %d", synthCount)
+	}
 }
 
 func TestFTSSearch_BasicMatch(t *testing.T) {
