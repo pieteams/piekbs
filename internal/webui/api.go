@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jasen215/wikiloop/internal/config"
+	"github.com/jasen215/wikiloop/internal/distill"
 	"github.com/jasen215/wikiloop/internal/kb"
 )
 
@@ -28,6 +29,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 			"embeddings":    0,
 			"index_path":    dbPath,
 			"index_size_kb": int64(0),
+			"distill_queue": map[string]int{},
 		})
 		return
 	}
@@ -35,6 +37,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 	byLayer, total, _ := kb.LayerCounts(db)
 	byKind, _ := kb.KindCounts(db)
+	queueStats, _ := distill.Stats(db)
 
 	var indexSize int64
 	if fi, err := os.Stat(dbPath); err == nil {
@@ -42,11 +45,12 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]interface{}{
-		"documents":  total,
-		"by_layer":   byLayer,
-		"by_kind":    byKind,
-		"index_path": dbPath,
-		"index_size": indexSize,
+		"documents":     total,
+		"by_layer":      byLayer,
+		"by_kind":       byKind,
+		"index_path":    dbPath,
+		"index_size":    indexSize,
+		"distill_queue": queueStats,
 	})
 }
 

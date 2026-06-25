@@ -57,6 +57,12 @@ type DistillConfig struct {
 	Token   string
 	Model   string
 	APIType string // "openai" (default) or "anthropic"
+	Workers int    // concurrent distill workers (default 3)
+}
+
+// IsConfigured returns true when all three LLM fields are non-empty.
+func (c DistillConfig) IsConfigured() bool {
+	return c.BaseURL != "" && c.Token != "" && c.Model != ""
 }
 
 type EmbeddingConfig struct {
@@ -83,6 +89,9 @@ func Load(kbRoot string) (*Config, error) {
 		Server: ServerConfig{
 			Host: "127.0.0.1",
 			Port: 8766,
+		},
+		Distill: DistillConfig{
+			Workers: 3,
 		},
 		Embedding: EmbeddingConfig{
 			IdleTimeout: 5 * time.Minute,
@@ -226,6 +235,10 @@ func setDistillField(cfg *Config, key, val string) {
 		cfg.Distill.Model = val
 	case "api_type":
 		cfg.Distill.APIType = val
+	case "workers":
+		if n, err := strconv.Atoi(val); err == nil && n > 0 {
+			cfg.Distill.Workers = n
+		}
 	}
 }
 
@@ -270,6 +283,7 @@ func Save(kbRoot string, cfg *Config) error {
 	fmt.Fprintf(&b, "  token: %q\n", cfg.Distill.Token)
 	fmt.Fprintf(&b, "  model: %q\n", cfg.Distill.Model)
 	fmt.Fprintf(&b, "  api_type: %q\n", cfg.Distill.APIType)
+	fmt.Fprintf(&b, "  workers: %d\n", cfg.Distill.Workers)
 	b.WriteString("\nembedding:\n")
 	fmt.Fprintf(&b, "  idle_timeout: %q\n", cfg.Embedding.IdleTimeout.String())
 	b.WriteString("\nui:\n")

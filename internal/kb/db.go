@@ -89,6 +89,17 @@ func migrateDescription(db *sql.DB) error {
 			return err
 		}
 	}
+
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS distill_queue (
+    path        TEXT PRIMARY KEY,
+    status      TEXT NOT NULL DEFAULT 'pending',
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    last_error  TEXT,
+    queued_at   INTEGER NOT NULL,
+    updated_at  INTEGER NOT NULL
+)`); err != nil {
+		return err
+	}
 	return nil
 }
 

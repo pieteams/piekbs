@@ -319,6 +319,30 @@ func runStdio(kbRoot string) error {
 		}
 	}()
 
+	// Recover stale processing tasks from previous crash.
+	if db, err := kb.OpenDB(kbRoot); err == nil {
+		_ = distill.RecoverStale(db)
+		db.Close()
+	}
+
+	// Start distill worker pool.
+	workerCtx, cancelWorkers := context.WithCancel(context.Background())
+	defer cancelWorkers()
+	if cfg.Distill.IsConfigured() {
+		distillCfg := distill.Config{
+			BaseURL: cfg.Distill.BaseURL,
+			Token:   cfg.Distill.Token,
+			Model:   cfg.Distill.Model,
+			APIType: cfg.Distill.APIType,
+		}
+		n := cfg.Distill.Workers
+		if n <= 0 {
+			n = 3
+		}
+		go distill.RunWorkers(workerCtx, distillCfg, kbRoot, n)
+		log.Printf("distill: started %d worker(s)", n)
+	}
+
 	log.Printf("WikiLoop stdio MCP starting (kb: %s)", kbRoot)
 	return mcp.ServeStdio(kbRoot, cfg.Server.APIKey)
 }
@@ -379,6 +403,30 @@ func runServe(kbRoot string) error {
 			log.Printf("watcher: %v", err)
 		}
 	}()
+
+	// Recover stale processing tasks from previous crash.
+	if db, err := kb.OpenDB(kbRoot); err == nil {
+		_ = distill.RecoverStale(db)
+		db.Close()
+	}
+
+	// Start distill worker pool.
+	workerCtx, cancelWorkers := context.WithCancel(context.Background())
+	defer cancelWorkers()
+	if cfg.Distill.IsConfigured() {
+		distillCfg := distill.Config{
+			BaseURL: cfg.Distill.BaseURL,
+			Token:   cfg.Distill.Token,
+			Model:   cfg.Distill.Model,
+			APIType: cfg.Distill.APIType,
+		}
+		n := cfg.Distill.Workers
+		if n <= 0 {
+			n = 3
+		}
+		go distill.RunWorkers(workerCtx, distillCfg, kbRoot, n)
+		log.Printf("distill: started %d worker(s)", n)
+	}
 
 	// Combine MCP and Web UI on the same mux.
 	mux := http.NewServeMux()
@@ -466,32 +514,14 @@ func catchUpFn(kbRoot string, since time.Time, cfg *config.Config) {
 	log.Printf("catch-up: %d files indexed", n)
 
 	if cfg.Distill.BaseURL != "" && cfg.Distill.Token != "" && cfg.Distill.Model != "" {
-		distillCfg := distill.Config{
-			BaseURL: cfg.Distill.BaseURL,
-			Token:   cfg.Distill.Token,
-			Model:   cfg.Distill.Model,
-			APIType: cfg.Distill.APIType,
-		}
-		files := distill.FindNewFiles(kbRoot)
-		distilled := 0
-		for _, rawPath := range files {
-			rel, _ := filepath.Rel(filepath.Join(kbRoot, "raw"), rawPath)
-			if err := distill.DistillFile(distillCfg, rawPath, kbRoot, nil); err != nil {
-				log.Printf("catch-up distill: %v", err)
-			} else {
-				log.Printf("catch-up distill: distilled raw/%s", rel)
-				distilled++
+		db2, err := kb.OpenDB(kbRoot)
+		if err == nil {
+			if n, err := distill.Enqueue(db2, kbRoot); err != nil {
+				log.Printf("catch-up enqueue: %v", err)
+			} else if n > 0 {
+				log.Printf("catch-up enqueue: %d file(s) queued for distillation", n)
 			}
-		}
-		if distilled > 0 {
-			log.Printf("catch-up distill: %d file(s) distilled", distilled)
-			db2, err := kb.OpenDB(kbRoot)
-			if err == nil {
-				if n2, err := kb.IndexFiles(db2, kbRoot); err == nil {
-					log.Printf("catch-up post-distill reindex: %d files indexed", n2)
-				}
-				db2.Close()
-			}
+			db2.Close()
 		}
 	}
 }
@@ -525,27 +555,14 @@ func reindexFn(kbRoot string) {
 		log.Printf("watcher: load config: %v", err)
 		cfg = &config.Config{}
 	}
-	// 3. Distill new raw files if LLM config is available.
-	if cfg.Distill.BaseURL != "" && cfg.Distill.Token != "" && cfg.Distill.Model != "" {
-		distillCfg := distill.Config{
-			BaseURL: cfg.Distill.BaseURL,
-			Token:   cfg.Distill.Token,
-			Model:   cfg.Distill.Model,
-			APIType: cfg.Distill.APIType,
-		}
-		files := distill.FindNewFiles(kbRoot)
-		for _, rawPath := range files {
-			rel, _ := filepath.Rel(filepath.Join(kbRoot, "raw"), rawPath)
-			if err := distill.DistillFile(distillCfg, rawPath, kbRoot, nil); err != nil {
-				log.Printf("watcher distill: %v", err)
-			} else {
-				log.Printf("watcher distill: distilled raw/%s", rel)
-			}
-		}
-		// Re-index to pick up newly generated wiki files.
-		if db2, err2 := kb.OpenDB(kbRoot); err2 == nil {
-			if n2, err2 := kb.IndexFiles(db2, kbRoot); err2 == nil && n2 > 0 {
-				log.Printf("watcher post-distill reindex: %d files indexed", n2)
+	// 3. Enqueue new raw files for distillation (workers process asynchronously).
+	if cfg.Distill.IsConfigured() {
+		db2, err2 := kb.OpenDB(kbRoot)
+		if err2 == nil {
+			if n, err := distill.Enqueue(db2, kbRoot); err != nil {
+				log.Printf("watcher enqueue: %v", err)
+			} else if n > 0 {
+				log.Printf("watcher enqueue: %d file(s) queued", n)
 			}
 			db2.Close()
 		}

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jasen215/wikiloop/internal/distill"
 	"github.com/jasen215/wikiloop/internal/kb"
 )
 
@@ -36,16 +37,18 @@ func handleKBStatus(kbRoot string) map[string]interface{} {
 	db, err := kb.OpenDB(kbRoot)
 	if err != nil {
 		return map[string]interface{}{
-			"documents":    0,
-			"by_layer":     map[string]int{},
-			"embeddings":   0,
-			"index_path":   dbPath,
+			"documents":     0,
+			"by_layer":      map[string]int{},
+			"embeddings":    0,
+			"index_path":    dbPath,
 			"index_size_kb": int64(0),
+			"distill_queue": map[string]int{},
 		}
 	}
 	defer db.Close()
 
 	byLayer, total, _ := kb.LayerCounts(db)
+	queueStats, _ := distill.Stats(db)
 
 	var embCount int
 	_ = db.QueryRow("SELECT COUNT(*) FROM embeddings").Scan(&embCount)
@@ -61,6 +64,7 @@ func handleKBStatus(kbRoot string) map[string]interface{} {
 		"embeddings":    embCount,
 		"index_path":    dbPath,
 		"index_size_kb": indexSizeKB,
+		"distill_queue": queueStats,
 	}
 }
 

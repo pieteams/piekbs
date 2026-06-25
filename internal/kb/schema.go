@@ -64,4 +64,13 @@ CREATE TABLE IF NOT EXISTS embeddings (
     updated_at INTEGER NOT NULL,
     FOREIGN KEY (doc_id) REFERENCES documents(id)
 );
+
+CREATE TABLE IF NOT EXISTS distill_queue (
+    path        TEXT PRIMARY KEY,
+    status      TEXT NOT NULL DEFAULT 'pending',
+    retry_count INTEGER NOT NULL DEFAULT 0,
+    last_error  TEXT,
+    queued_at   INTEGER NOT NULL,
+    updated_at  INTEGER NOT NULL
+);
 `
