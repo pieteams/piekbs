@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // OpenDB opens (or creates) kb.sqlite under kbRoot/index/.
@@ -21,7 +21,7 @@ func OpenDB(kbRoot string) (*sql.DB, error) {
 
 	dbPath := filepath.Join(indexDir, "kb.sqlite")
 
-	db, err := sql.Open("sqlite3", dbPath+"?_journal_mode=WAL")
+	db, err := sql.Open("sqlite", dbPath+"?_journal_mode=WAL")
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
