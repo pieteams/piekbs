@@ -189,8 +189,11 @@ type ReindexResult struct {
 
 // LintResult is returned by KBLint.
 type LintResult struct {
-	Warnings []LintWarning `json:"warnings"`
-	Count    int           `json:"count"`
+	Warnings     []LintWarning `json:"warnings"`
+	Count        int           `json:"count"`
+	RedLinks     []RedLink     `json:"red_links"`
+	BrokenLinks  int           `json:"broken_links"`
+	Placeholders int           `json:"placeholders"`
 }
 
 // KBAdd writes text content to raw/<filename> and triggers incremental indexing.
@@ -279,9 +282,13 @@ func KBReindex(kbRoot string, full bool) (*ReindexResult, error) {
 	return &ReindexResult{Written: written, Message: "index updated"}, nil
 }
 
-// KBLint runs deterministic health checks over wiki pages.
+// KBLint runs deterministic health checks over wiki pages and cleans broken
+// links from the links table. Side effect: deletes broken related_to/supports/
+// contradicts rows and writes wiki/index/red_links.json.
 func KBLint(kbRoot string) (*LintResult, error) {
 	AppendQueryLog(kbRoot, "kb_lint", "")
+
+	// File-level lint (missing fields, broken sources).
 	warnings, err := Lint(kbRoot)
 	if err != nil {
 		return nil, &KBError{Code: 500, Message: err.Error()}
@@ -289,7 +296,50 @@ func KBLint(kbRoot string) (*LintResult, error) {
 	if warnings == nil {
 		warnings = []LintWarning{}
 	}
-	return &LintResult{Warnings: warnings, Count: len(warnings)}, nil
+
+	// Broken-link cleanup (requires DB).
+	db, err := OpenDB(kbRoot)
+	if err != nil {
+		// Non-fatal: return file warnings even if DB unavailable.
+		return &LintResult{Warnings: warnings, Count: len(warnings)}, nil
+	}
+	defer db.Close()
+
+	redLinks, blWarnings, brokenPaths, placeholders, err := cleanBrokenLinks(db)
+	if err != nil {
+		return nil, &KBError{Code: 500, Message: "clean broken links: " + err.Error()}
+	}
+	warnings = append(warnings, blWarnings...)
+	if redLinks == nil {
+		redLinks = []RedLink{}
+	}
+
+	// Write red_links.json (overwrite each run).
+	if err := writeRedLinks(kbRoot, redLinks); err != nil {
+		return nil, &KBError{Code: 500, Message: "write red_links.json: " + err.Error()}
+	}
+
+	return &LintResult{
+		Warnings:     warnings,
+		Count:        len(warnings),
+		RedLinks:     redLinks,
+		BrokenLinks:  brokenPaths,
+		Placeholders: placeholders,
+	}, nil
+}
+
+// writeRedLinks writes redLinks as JSON to wiki/index/red_links.json,
+// sorted by count descending. Creates the directory if needed.
+func writeRedLinks(kbRoot string, redLinks []RedLink) error {
+	dir := filepath.Join(kbRoot, "wiki", "index")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	data, err := json.Marshal(redLinks)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "red_links.json"), data, 0o644)
 }
 
 // FileInfo describes a single file in the raw/ directory.

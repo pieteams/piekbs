@@ -3,6 +3,7 @@
 package kb
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -211,5 +212,44 @@ func TestKBLint(t *testing.T) {
 	}
 	if result.Warnings == nil {
 		t.Error("warnings should be non-nil slice")
+	}
+}
+
+// TestKBLint_CleansBrokenLinks verifies that KBLint deletes broken links from
+// the links table and writes red_links.json with concept-name gaps.
+func TestKBLint_CleansBrokenLinks(t *testing.T) {
+	dir := setupTestKB(t)
+	db, err := OpenDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Insert a source doc and a concept-name broken link.
+	db.Exec(`INSERT OR IGNORE INTO documents (id,path,layer,kind,title,description,content,content_hash,updated_at,authority,doc_timestamp) VALUES ('wiki/src.md','wiki/src.md','wiki','source-note','S','','body','h',1,3,0)`)
+	db.Exec(`INSERT INTO links (source_doc_id,target_doc_id,relation,confidence) VALUES ('wiki/src.md','数字经济','related_to',1.0)`)
+	db.Close()
+
+	result, err := KBLint(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.RedLinks == nil || len(result.RedLinks) != 1 {
+		t.Fatalf("want 1 RedLink, got %+v", result.RedLinks)
+	}
+	if result.RedLinks[0].Concept != "数字经济" {
+		t.Errorf("want concept '数字经济', got %q", result.RedLinks[0].Concept)
+	}
+
+	// red_links.json must exist and be valid.
+	jsonPath := filepath.Join(dir, "wiki", "index", "red_links.json")
+	data, err := os.ReadFile(jsonPath)
+	if err != nil {
+		t.Fatalf("red_links.json not written: %v", err)
+	}
+	var links []RedLink
+	if err := json.Unmarshal(data, &links); err != nil {
+		t.Fatalf("invalid red_links.json: %v", err)
+	}
+	if len(links) != 1 || links[0].Concept != "数字经济" {
+		t.Errorf("unexpected red_links.json content: %s", data)
 	}
 }

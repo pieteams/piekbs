@@ -80,5 +80,11 @@ func handleKBLint(kbRoot string) map[string]interface{} {
 	if err != nil {
 		return map[string]interface{}{"error": err.Error()}
 	}
-	return map[string]interface{}{"warnings": result.Warnings, "count": result.Count}
+	return map[string]interface{}{
+		"warnings":     result.Warnings,
+		"count":        result.Count,
+		"red_links":    result.RedLinks,
+		"broken_links": result.BrokenLinks,
+		"placeholders": result.Placeholders,
+	}
 }

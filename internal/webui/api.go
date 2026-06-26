@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -244,4 +245,69 @@ func (s *Server) handleLint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]interface{}{"ok": true, "warnings": result.Warnings, "count": result.Count})
+}
+
+// handleRedLinks serves GET and DELETE for the red_links.json knowledge-gap list.
+// GET /api/red-links — returns {"red_links":[...],"count":N}
+// DELETE /api/red-links?concept=<name> — removes one concept from red_links.json
+func (s *Server) handleRedLinks(w http.ResponseWriter, r *http.Request) {
+	jsonPath := filepath.Join(s.kbRoot, "wiki", "index", "red_links.json")
+	switch r.Method {
+	case http.MethodGet:
+		data, err := os.ReadFile(jsonPath)
+		if errors.Is(err, os.ErrNotExist) {
+			writeJSON(w, map[string]interface{}{"red_links": []interface{}{}, "count": 0})
+			return
+		}
+		if err != nil {
+			kbErrToHTTP(w, &kb.KBError{Code: 500, Message: err.Error()})
+			return
+		}
+		var links []kb.RedLink
+		if err := json.Unmarshal(data, &links); err != nil {
+			kbErrToHTTP(w, &kb.KBError{Code: 500, Message: "parse red_links.json: " + err.Error()})
+			return
+		}
+		writeJSON(w, map[string]interface{}{"red_links": links, "count": len(links)})
+
+	case http.MethodDelete:
+		concept := strings.TrimSpace(r.URL.Query().Get("concept"))
+		if concept == "" {
+			kbErrToHTTP(w, &kb.KBError{Code: 400, Message: "concept query param required"})
+			return
+		}
+		data, err := os.ReadFile(jsonPath)
+		if errors.Is(err, os.ErrNotExist) {
+			writeJSON(w, map[string]interface{}{"ok": true})
+			return
+		}
+		if err != nil {
+			kbErrToHTTP(w, &kb.KBError{Code: 500, Message: err.Error()})
+			return
+		}
+		var links []kb.RedLink
+		if err := json.Unmarshal(data, &links); err != nil {
+			kbErrToHTTP(w, &kb.KBError{Code: 500, Message: err.Error()})
+			return
+		}
+		filtered := links[:0]
+		for _, l := range links {
+			if l.Concept != concept {
+				filtered = append(filtered, l)
+			}
+		}
+		out, err := json.Marshal(filtered)
+		if err != nil {
+			kbErrToHTTP(w, &kb.KBError{Code: 500, Message: "marshal red_links: " + err.Error()})
+			return
+		}
+		if err := os.WriteFile(jsonPath, out, 0o644); err != nil {
+			kbErrToHTTP(w, &kb.KBError{Code: 500, Message: err.Error()})
+			return
+		}
+		writeJSON(w, map[string]interface{}{"ok": true})
+
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
 }

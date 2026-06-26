@@ -3,8 +3,10 @@
 package kb
 
 import (
+	"database/sql"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -14,7 +16,7 @@ var requiredFMFields = []string{"title", "type", "sources", "timestamp"}
 // LintWarning is a single issue found by Lint, tied to a KB-root-relative path.
 type LintWarning struct {
 	Path   string `json:"path"`
-	Kind   string `json:"kind"`   // "missing_field" | "broken_source"
+	Kind   string `json:"kind"`   // "missing_field" | "broken_source" | "broken_related" | "missing_concept"
 	Detail string `json:"detail"` // field name or source path
 }
 
@@ -98,4 +100,105 @@ func isFMFieldAbsent(v interface{}) bool {
 	default:
 		return false
 	}
+}
+
+// RedLink represents a concept name referenced in related_to/supports/contradicts
+// that has no corresponding wiki page. Used to surface knowledge gaps.
+type RedLink struct {
+	Concept      string   `json:"concept"`
+	Count        int      `json:"count"`
+	ReferencedBy []string `json:"referenced_by"`
+}
+
+// cleanBrokenLinks scans links table for broken related_to/supports/contradicts
+// entries and deletes them all. Returns:
+//   - redLinks: concept-name broken links (no "/" in target) for red_links.json
+//   - warnings: LintWarnings for path broken links (broken_related) and concept
+//     broken links (missing_concept)
+//   - brokenPaths: count of path-format broken links deleted
+//   - placeholders: count of placeholder entries deleted (silent)
+//
+// Side effect: deletes broken rows from the links table.
+func cleanBrokenLinks(db *sql.DB) ([]RedLink, []LintWarning, int, int, error) {
+	const selectSQL = `
+SELECT l.id, l.relation, l.source_doc_id, l.target_doc_id,
+  CASE
+    WHEN trim(l.target_doc_id) = ''
+      OR l.target_doc_id LIKE '#%'
+      OR l.target_doc_id LIKE '[%'       THEN 'placeholder'
+    WHEN instr(l.target_doc_id, '/') > 0 THEN 'path'
+    ELSE                                      'concept'
+  END AS link_type
+FROM links l
+LEFT JOIN documents d ON d.id = l.target_doc_id
+WHERE l.relation IN ('related_to', 'supports', 'contradicts')
+  AND d.id IS NULL`
+
+	rows, err := db.Query(selectSQL)
+	if err != nil {
+		return nil, nil, 0, 0, err
+	}
+	defer rows.Close()
+
+	conceptMap := make(map[string]*RedLink)
+	var warnings []LintWarning
+	brokenPaths, placeholders := 0, 0
+
+	for rows.Next() {
+		var id int64
+		var relation, sourceDID, targetDID, linkType string
+		if err := rows.Scan(&id, &relation, &sourceDID, &targetDID, &linkType); err != nil {
+			return nil, nil, 0, 0, err
+		}
+		switch linkType {
+		case "placeholder":
+			placeholders++
+		case "path":
+			brokenPaths++
+			warnings = append(warnings, LintWarning{
+				Path:   sourceDID,
+				Kind:   "broken_related",
+				Detail: targetDID,
+			})
+		case "concept":
+			rl, ok := conceptMap[targetDID]
+			if !ok {
+				rl = &RedLink{Concept: targetDID}
+				conceptMap[targetDID] = rl
+			}
+			rl.Count++
+			rl.ReferencedBy = append(rl.ReferencedBy, sourceDID)
+			warnings = append(warnings, LintWarning{
+				Path:   sourceDID,
+				Kind:   "missing_concept",
+				Detail: targetDID,
+			})
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, 0, 0, err
+	}
+
+	// Delete all broken rows in one statement.
+	const deleteSQL = `
+DELETE FROM links
+WHERE relation IN ('related_to', 'supports', 'contradicts')
+  AND id NOT IN (
+    SELECT l.id FROM links l
+    JOIN documents d ON d.id = l.target_doc_id
+    WHERE l.relation IN ('related_to', 'supports', 'contradicts')
+  )`
+	if _, err := db.Exec(deleteSQL); err != nil {
+		return nil, nil, 0, 0, err
+	}
+
+	// Convert concept map to sorted slice (by count desc).
+	redLinks := make([]RedLink, 0, len(conceptMap))
+	for _, rl := range conceptMap {
+		redLinks = append(redLinks, *rl)
+	}
+	sort.Slice(redLinks, func(i, j int) bool {
+		return redLinks[i].Count > redLinks[j].Count
+	})
+	return redLinks, warnings, brokenPaths, placeholders, nil
 }

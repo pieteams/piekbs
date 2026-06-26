@@ -62,6 +62,13 @@
         <span id="admin-status" style="font-size:12px;color:#555;align-self:center"></span>
     </div>
     <div id="lint-results" style="margin-top:8px;font-size:12px;display:none"></div>
+    <div id="red-links-panel" style="margin-top:12px;display:none">
+      <div style="font-weight:600;margin-bottom:6px;font-size:13px">
+        知识缺口 / Knowledge Gaps
+        <span id="red-links-count" style="font-weight:400;color:#888;font-size:12px"></span>
+      </div>
+      <div id="red-links-list"></div>
+    </div>
 
     <div class="card">
         <h2 data-i18n="search.title">Search</h2>
@@ -246,12 +253,44 @@ async function doLint() {
                 `<div style="color:#cf222e;margin:2px 0">⚠ ${escHtml(w.path)}: ${escHtml(w.kind)} — ${escHtml(w.detail)}</div>`
             ).join('');
         }
+        loadRedLinks();
     } catch(e) {
         status.style.color = '#cf222e'; status.textContent = 'Failed';
     }
 }
 
+async function loadRedLinks() {
+    const panel = document.getElementById('red-links-panel');
+    const countEl = document.getElementById('red-links-count');
+    const listEl = document.getElementById('red-links-list');
+    try {
+        const res = await fetch('/api/red-links');
+        const data = await res.json();
+        const links = data.red_links || [];
+        if (links.length === 0) { panel.style.display = 'none'; return; }
+        panel.style.display = '';
+        countEl.textContent = '(' + links.length + ')';
+        listEl.innerHTML = links.map(l =>
+            `<div style="display:flex;align-items:center;gap:8px;margin:3px 0;font-size:12px">
+              <span style="color:#cf222e">⬤</span>
+              <span style="flex:1">${escHtml(l.concept)}</span>
+              <span style="color:#888">引用 ${l.count} 次</span>
+              <button onclick="deleteRedLink(${JSON.stringify(l.concept)})"
+                style="padding:2px 8px;font-size:11px;border:1px solid #d0d7de;border-radius:4px;cursor:pointer;background:#fff">
+                忽略
+              </button>
+            </div>`
+        ).join('');
+    } catch(e) { panel.style.display = 'none'; }
+}
+
+async function deleteRedLink(concept) {
+    await fetch('/api/red-links?concept=' + encodeURIComponent(concept), {method:'DELETE'});
+    loadRedLinks();
+}
+
 loadStatus();
+loadRedLinks();
 </script>
 
 <script>
