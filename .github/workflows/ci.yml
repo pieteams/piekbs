@@ -17,19 +17,8 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Download libtokenizers
-        run: |
-          mkdir -p lib/darwin-arm64
-          curl -fsSL https://github.com/daulet/tokenizers/releases/download/v1.27.0/libtokenizers.darwin-arm64.tar.gz \
-            | tar -xz -C lib/darwin-arm64
-          # cgo_link.go searches lib/ root; also place there for direct CGO_LDFLAGS path
-          cp lib/darwin-arm64/libtokenizers.a lib/
-
-      - name: Install onnxruntime
-        run: brew install onnxruntime
-
       - name: Build
-        run: CGO_ENABLED=1 go build -tags fts5 ./...
+        run: go build -tags fts5 ./...
 
       - name: Test
-        run: CGO_ENABLED=1 go test -tags fts5 ./...
+        run: go test -tags fts5 ./...

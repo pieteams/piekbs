@@ -1,8 +1,10 @@
 package convert
 
 import (
+	"archive/zip"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -58,4 +60,39 @@ func TestFindConverter(t *testing.T) {
 	// The result depends on the environment; either a path or empty string is valid.
 	result := FindConverter()
 	t.Logf("FindConverter() = %q", result)
+}
+
+// TestInjectEmbeddedXlsx_NoPlaceholder verifies that content without image
+// placeholders is returned unchanged — embedded Excel extraction must not
+// corrupt documents that have no OLE objects.
+func TestInjectEmbeddedXlsx_NoPlaceholder(t *testing.T) {
+	md := []byte("# Title\n\nSome text without any image placeholder.")
+	result := injectEmbeddedXlsx("markitdown", "dummy.docx", md)
+	if string(result) != string(md) {
+		t.Errorf("expected unchanged content, got: %s", result)
+	}
+}
+
+// TestInjectEmbeddedXlsx_NoEmbeddings verifies that a docx zip with no
+// embeddings/ entries leaves the markdown unchanged.
+func TestInjectEmbeddedXlsx_NoEmbeddings(t *testing.T) {
+	// Build a minimal zip file with no embeddings.
+	tmp, err := os.CreateTemp("", "test-*.docx")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmp.Name())
+
+	zw := zip.NewWriter(tmp)
+	w, _ := zw.Create("word/document.xml")
+	w.Write([]byte("<doc/>")) //nolint:errcheck
+	zw.Close()
+	tmp.Close()
+
+	md := []byte("# Doc\n\n![img](data:image/png;base64,abc)")
+	result := injectEmbeddedXlsx("markitdown", tmp.Name(), md)
+	// No embeddings → placeholder must survive unchanged.
+	if !strings.Contains(string(result), "data:image/png") {
+		t.Errorf("expected placeholder to remain, got: %s", result)
+	}
 }

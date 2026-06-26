@@ -3,11 +3,13 @@
 package convert
 
 import (
+	"archive/zip"
 	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -105,7 +107,14 @@ func ConvertFile(converter, srcPath, destPath string) bool {
 			cmd.Stdout = &out
 			cmd.Stderr = os.Stderr
 			if err = cmd.Run(); err == nil {
-				err = os.WriteFile(destPath, out.Bytes(), 0o644)
+				content := out.Bytes()
+				// Post-process docx/pptx: extract embedded Excel tables and
+				// replace image placeholders with the converted table markdown.
+				ext := strings.ToLower(filepath.Ext(srcPath))
+				if ext == ".docx" || ext == ".pptx" {
+					content = injectEmbeddedXlsx(converter, srcPath, content)
+				}
+				err = os.WriteFile(destPath, content, 0o644)
 			}
 
 		case strings.HasSuffix(converterBase, "pandoc"):
@@ -131,6 +140,82 @@ func ConvertFile(converter, srcPath, destPath string) bool {
 		fmt.Fprintf(os.Stderr, "convert: timeout converting %s\n", srcPath)
 		return false
 	}
+}
+
+// imgPlaceholderRe matches base64-encoded image placeholders produced by markitdown
+// for embedded OLE objects (e.g. embedded Excel sheets inside docx/pptx).
+var imgPlaceholderRe = regexp.MustCompile(`!\[.*?\]\(data:image/[^)]+\)`)
+
+// injectEmbeddedXlsx extracts embedded .xlsx files from a docx/pptx (which are zip
+// archives) and converts each one to markdown using markitdown. The resulting table
+// markdown replaces the first image placeholder in the converted markdown content.
+// If extraction or conversion fails for any sheet, that placeholder is left unchanged.
+func injectEmbeddedXlsx(converter, srcPath string, md []byte) []byte {
+	zr, err := zip.OpenReader(srcPath)
+	if err != nil {
+		return md
+	}
+	defer zr.Close()
+
+	result := md
+	for _, f := range zr.File {
+		// Embedded Excel files live under word/embeddings/ or ppt/embeddings/
+		if !strings.Contains(f.Name, "embeddings/") || !strings.HasSuffix(strings.ToLower(f.Name), ".xlsx") {
+			continue
+		}
+		// Only replace if there is still a placeholder to fill.
+		if !imgPlaceholderRe.Match(result) {
+			break
+		}
+
+		rc, err := f.Open()
+		if err != nil {
+			continue
+		}
+		tmp, err := os.CreateTemp("", "embedded-*.xlsx")
+		if err != nil {
+			rc.Close()
+			continue
+		}
+		tmpPath := tmp.Name()
+
+		_, copyErr := tmp.ReadFrom(rc)
+		rc.Close()
+		tmp.Close()
+		if copyErr != nil {
+			os.Remove(tmpPath)
+			continue
+		}
+
+		var out bytes.Buffer
+		cmd := exec.Command(converter, tmpPath) //nolint:gosec
+		cmd.Stdout = &out
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			os.Remove(tmpPath)
+			continue
+		}
+		os.Remove(tmpPath)
+
+		// Clean up common markitdown artifacts from Excel conversion.
+		xlMD := strings.ReplaceAll(out.String(), "| NaN ", "|     ")
+		xlMD = strings.ReplaceAll(xlMD, "\\_", "_")
+		xlMD = strings.TrimSpace(xlMD)
+		if xlMD == "" {
+			continue
+		}
+
+		// Replace the first image placeholder with the Excel table markdown.
+		replaced := false
+		result = imgPlaceholderRe.ReplaceAllFunc(result, func(match []byte) []byte {
+			if replaced {
+				return match
+			}
+			replaced = true
+			return []byte("\n\n" + xlMD + "\n\n")
+		})
+	}
+	return result
 }
 
 // Run finds a converter, discovers convertible files under kbRoot, and converts them.
