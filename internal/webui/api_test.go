@@ -43,8 +43,9 @@ func TestSettingsGetIncludesLanguage(t *testing.T) {
 	if !ok {
 		t.Fatal("response missing 'ui' key")
 	}
-	if ui["language"] != "zh" {
-		t.Errorf("expected zh, got %v", ui["language"])
+	// old "zh" is migrated to "zh-CN" by Load()
+	if ui["language"] != "zh-CN" {
+		t.Errorf("expected zh-CN (migrated from zh), got %v", ui["language"])
 	}
 }
 

@@ -60,66 +60,11 @@
     </div>
 </div>
 
-<script>
-const I18N = {
-  en: {
-    "nav.home":           "Home",
-    "nav.files":          "Files",
-    "nav.settings":       "Settings",
-    "files.upload_title": "Upload Files",
-    "files.drop_hint":    "Drop files here, or",
-    "files.browse":       "browse",
-    "files.raw_title":    "Raw Files",
-    "files.col_path":     "Path",
-    "files.col_size":     "Size",
-    "files.col_modified": "Modified",
-    "files.loading":      "Loading...",
-    "files.no_files":     "No files",
-    "files.uploading":    "Uploading",
-    "files.uploaded":     "file(s) uploaded",
-    "files.failed":       "failed",
-    "files.lark_title":   "Import Lark / Feishu Wiki",
-    "files.lark_import":  "Import",
-    "files.lark_hint":    "Embedded Base tables are imported in full and become searchable. Requires a logged-in lark-cli user on this Mac.",
-    "files.lark_url":     "Enter a Lark Wiki URL",
-    "files.lark_running": "Importing document and embedded tables...",
-    "files.lark_failed":  "Import failed",
-    "error.load_files":   "Failed to load file list",
-  },
-  zh: {
-    "nav.home":           "首页",
-    "nav.files":          "文件",
-    "nav.settings":       "设置",
-    "files.upload_title": "上传文件",
-    "files.drop_hint":    "拖放文件到这里，或",
-    "files.browse":       "浏览",
-    "files.raw_title":    "原始文件",
-    "files.col_path":     "路径",
-    "files.col_size":     "大小",
-    "files.col_modified": "修改时间",
-    "files.loading":      "加载中…",
-    "files.no_files":     "暂无文件",
-    "files.uploading":    "上传中",
-    "files.uploaded":     "个文件已上传",
-    "files.failed":       "个失败",
-    "files.lark_title":   "导入飞书 / Lark Wiki",
-    "files.lark_import":  "导入",
-    "files.lark_hint":    "内嵌多维表格会完整导入并支持搜索，需要本机 lark-cli 已登录用户账号。",
-    "files.lark_url":     "请输入飞书 Wiki 地址",
-    "files.lark_running": "正在导入文档和内嵌表格…",
-    "files.lark_failed":  "导入失败",
-    "error.load_files":   "无法加载文件列表",
-  }
-};
-
-let _lang = "zh";
-
-function t(key) {
-  return (I18N[_lang] || I18N["zh"])[key] || (I18N["en"][key] || key);
-}
-</script>
 
 <script>
+let dict = {};
+function t(key) { return dict[key] || key; }
+
 const PAGE_SIZE = 10;
 let allFiles = [];
 let currentPage = 1;
@@ -266,12 +211,25 @@ async function uploadFiles(files) {
 
 <script>
 async function applyI18n() {
+  let lang = "en";
   try {
     const res = await fetch("/api/settings");
     const cfg = await res.json();
-    _lang = cfg?.ui?.language || "zh";
+    lang = cfg?.ui?.language || "en";
   } catch (_) {}
-  const dict = I18N[_lang] || I18N["zh"];
+
+  dict = {};
+  try {
+    const res = await fetch("/static/i18n/" + lang + ".json");
+    dict = await res.json();
+  } catch (_) {
+    // fallback: try en.json
+    try {
+      const res = await fetch("/static/i18n/en.json");
+      dict = await res.json();
+    } catch (_) {}
+  }
+
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
     if (!dict[key]) return;
@@ -285,6 +243,11 @@ async function applyI18n() {
     } else {
       el.textContent = dict[key];
     }
+  });
+
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+    const key = el.getAttribute("data-i18n-placeholder");
+    if (dict[key]) el.placeholder = dict[key];
   });
   loadFiles();
 }

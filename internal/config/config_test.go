@@ -1,3 +1,5 @@
+//go:build fts5
+
 package config
 
 import (
@@ -6,6 +8,11 @@ import (
 	"testing"
 	"time"
 )
+
+var validLangSet = map[string]bool{
+	"en": true, "zh-CN": true, "zh-TW": true,
+	"ru": true, "de": true, "fr": true, "es": true, "ko": true,
+}
 
 func TestLoadSetsDefaultLanguage(t *testing.T) {
 	dir := t.TempDir()
@@ -16,8 +23,8 @@ func TestLoadSetsDefaultLanguage(t *testing.T) {
 	if cfg.UI.Language == "" {
 		t.Error("UI.Language should be set after Load, got empty string")
 	}
-	if cfg.UI.Language != "zh" && cfg.UI.Language != "en" {
-		t.Errorf("UI.Language must be 'zh' or 'en', got %q", cfg.UI.Language)
+	if !validLangSet[cfg.UI.Language] {
+		t.Errorf("UI.Language must be one of 8 valid codes, got %q", cfg.UI.Language)
 	}
 	// Should have been written to config.yaml
 	data, err := os.ReadFile(filepath.Join(dir, "config.yaml"))
@@ -149,5 +156,50 @@ func TestSaveConfigUsesPrivatePermissions(t *testing.T) {
 	}
 	if got := info.Mode().Perm(); got != 0o600 {
 		t.Fatalf("config.yaml permissions = %o, want 600", got)
+	}
+}
+
+func TestSetUIField_ValidLanguages(t *testing.T) {
+	validLangs := []string{"en", "zh-CN", "zh-TW", "ru", "de", "fr", "es", "ko"}
+	for _, lang := range validLangs {
+		cfg := &Config{}
+		setUIField(cfg, "language", lang)
+		if cfg.UI.Language != lang {
+			t.Errorf("setUIField language=%q: got %q, want %q", lang, cfg.UI.Language, lang)
+		}
+	}
+}
+
+func TestSetUIField_InvalidLanguage(t *testing.T) {
+	cfg := &Config{UI: UIConfig{Language: "en"}}
+	setUIField(cfg, "language", "ja") // 不支持的语言
+	if cfg.UI.Language != "en" {
+		t.Errorf("invalid language should be rejected, got %q", cfg.UI.Language)
+	}
+}
+
+func TestSetUIField_RejectsLegacyZh(t *testing.T) {
+	cfg := &Config{UI: UIConfig{Language: "en"}}
+	setUIField(cfg, "language", "zh")
+	if cfg.UI.Language != "en" {
+		t.Errorf("legacy 'zh' should be rejected by setUIField, got %q", cfg.UI.Language)
+	}
+}
+
+func TestLoad_MigratesOldZh(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	os.WriteFile(cfgPath, []byte("ui:\n  language: \"zh\"\n"), 0o644)
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.UI.Language != "zh-CN" {
+		t.Errorf("old 'zh' should migrate to 'zh-CN', got %q", cfg.UI.Language)
+	}
+	data, _ := os.ReadFile(cfgPath)
+	if !contains(string(data), "zh-CN") {
+		t.Errorf("config.yaml should be updated to zh-CN, got:\n%s", data)
 	}
 }

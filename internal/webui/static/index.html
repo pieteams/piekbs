@@ -81,64 +81,11 @@
     </div>
 </div>
 
-<script>
-const I18N = {
-  en: {
-    "nav.home":              "Home",
-    "nav.files":             "Files",
-    "nav.settings":          "Settings",
-    "status.title":          "Knowledge Base Status",
-    "status.documents":      "Documents",
-    "status.index_size":     "Index Size",
-    "status.reindex":        "Reindex",
-    "status.reindex_full":   "Full Reindex",
-    "status.lint":           "Lint",
-    "status.raw":            "raw",
-    "status.raw_desc":       "Source materials",
-    "status.source_note_desc": "Distilled notes",
-    "status.concept_desc":   "Concept pages",
-    "status.comparison_desc":"Comparison pages",
-    "status.decision_desc":  "Decision pages",
-    "search.title":          "Search",
-    "search.placeholder":    "Search the knowledge base...",
-    "search.btn":            "Search",
-    "search.no_results":     "No results found",
-    "error.connect":         "Cannot connect to server",
-    "error.search_failed":   "Search request failed",
-  },
-  zh: {
-    "nav.home":              "首页",
-    "nav.files":             "文件",
-    "nav.settings":          "设置",
-    "status.title":          "知识库状态",
-    "status.documents":      "文档总数",
-    "status.index_size":     "索引大小",
-    "status.reindex":        "重建索引",
-    "status.reindex_full":   "全量重建",
-    "status.lint":           "健康检查",
-    "status.raw":            "raw",
-    "status.raw_desc":       "原始资料",
-    "status.source_note_desc": "蒸馏摘要",
-    "status.concept_desc":   "概念综合",
-    "status.comparison_desc":"方案对比",
-    "status.decision_desc":  "技术决策",
-    "search.title":          "搜索",
-    "search.placeholder":    "搜索知识库…",
-    "search.btn":            "搜索",
-    "search.no_results":     "无结果",
-    "error.connect":         "无法连接服务器",
-    "error.search_failed":   "搜索请求失败",
-  }
-};
-
-let _lang = "zh";
-
-function t(key) {
-  return (I18N[_lang] || I18N["zh"])[key] || (I18N["en"][key] || key);
-}
-</script>
 
 <script>
+let dict = {};
+function t(key) { return dict[key] || key; }
+
 function fmtSize(bytes) {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
@@ -289,26 +236,51 @@ async function deleteRedLink(concept) {
     loadRedLinks();
 }
 
-loadStatus();
-loadRedLinks();
 </script>
 
 <script>
 async function applyI18n() {
+  let lang = "en";
   try {
     const res = await fetch("/api/settings");
     const cfg = await res.json();
-    _lang = cfg?.ui?.language || "zh";
+    lang = cfg?.ui?.language || "en";
   } catch (_) {}
-  const dict = I18N[_lang] || I18N["zh"];
+
+  dict = {};
+  try {
+    const res = await fetch("/static/i18n/" + lang + ".json");
+    dict = await res.json();
+  } catch (_) {
+    // fallback: try en.json
+    try {
+      const res = await fetch("/static/i18n/en.json");
+      dict = await res.json();
+    } catch (_) {}
+  }
+
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
-    if (dict[key]) el.textContent = dict[key];
+    if (!dict[key]) return;
+    if (el.children.length > 0) {
+      for (const node of el.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          node.textContent = dict[key];
+          break;
+        }
+      }
+    } else {
+      el.textContent = dict[key];
+    }
   });
+
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
     const key = el.getAttribute("data-i18n-placeholder");
     if (dict[key]) el.placeholder = dict[key];
   });
+
+  loadStatus();
+  loadRedLinks();
 }
 
 document.addEventListener("DOMContentLoaded", applyI18n);

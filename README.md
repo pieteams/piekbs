@@ -2,7 +2,16 @@
   <img src="docs/readme/logo.png" width="128" alt="WikiLoop"><br>
   <h1>WikiLoop</h1>
   <p>A knowledge search engine for agents — distill raw docs into structured Markdown wiki, search and read via MCP</p>
-  <p><a href="docs/readme/README.zh-CN.md">中文文档</a></p>
+  <p>
+    <strong>English</strong> |
+    <a href="docs/readme/README.zh-CN.md">简体中文</a> |
+    <a href="docs/readme/README.zh-TW.md">繁體中文</a> |
+    <a href="docs/readme/README.ru.md">Русский</a> |
+    <a href="docs/readme/README.de.md">Deutsch</a> |
+    <a href="docs/readme/README.fr.md">Français</a> |
+    <a href="docs/readme/README.es.md">Español</a> |
+    <a href="docs/readme/README.ko.md">한국어</a>
+  </p>
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
     <a href="https://github.com/jasen215/wikiloop/releases"><img src="https://img.shields.io/github/v/release/jasen215/wikiloop" alt="Release"></a>
