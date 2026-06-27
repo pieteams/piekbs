@@ -3,6 +3,8 @@
 package mcp
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -118,5 +120,68 @@ func TestHandleKBReindex(t *testing.T) {
 	}
 	if msg != "index updated" {
 		t.Errorf("expected message 'index updated', got %q", msg)
+	}
+}
+
+func TestWithAPIKey_NoKey_AllowsAll(t *testing.T) {
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	h := withAPIKey("", inner)
+
+	for _, hdr := range []string{"", "anything"} {
+		req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+		if hdr != "" {
+			req.Header.Set("x-api-key", hdr)
+		}
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Errorf("empty key config: header=%q want 200 got %d", hdr, rr.Code)
+		}
+	}
+}
+
+func TestWithAPIKey_WithKey_RejectsWrongKey(t *testing.T) {
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	h := withAPIKey("secret", inner)
+
+	req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+	req.Header.Set("x-api-key", "wrong")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("wrong key: want 401 got %d", rr.Code)
+	}
+}
+
+func TestWithAPIKey_WithKey_AllowsCorrectKey(t *testing.T) {
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	h := withAPIKey("secret", inner)
+
+	req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+	req.Header.Set("x-api-key", "secret")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Errorf("correct key: want 200 got %d", rr.Code)
+	}
+}
+
+func TestWithAPIKey_WithKey_RejectsMissingKey(t *testing.T) {
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	h := withAPIKey("secret", inner)
+
+	req := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("missing key: want 401 got %d", rr.Code)
 	}
 }

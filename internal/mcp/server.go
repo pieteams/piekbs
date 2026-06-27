@@ -65,10 +65,10 @@ CITATION RULES (mandatory):
   - If a conflict appears in results, acknowledge both sides.`
 
 // Start creates an MCP HTTP server, registers KB tools, and listens on addr.
-// apiKey is reserved for future auth middleware; currently unused.
+// If apiKey is non-empty, all requests must include a matching x-api-key header.
 func Start(addr, kbRoot, apiKey string) error {
 	mux := http.NewServeMux()
-	RegisterRoutes(mux, kbRoot)
+	RegisterRoutes(mux, kbRoot, apiKey)
 	return http.ListenAndServe(addr, mux)
 }
 
@@ -208,7 +208,7 @@ func withCORS(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Mcp-Session-Id")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Mcp-Session-Id, x-api-key")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
