@@ -88,6 +88,13 @@ export default defineConfig({
           ],
           '/ecosystem/': [
             {
+              text: 'WikiLoop',
+              items: [
+                { text: 'WikiLoop in Industry', link: '/ecosystem/wikiloop-industries' },
+                { text: 'Industry Use Cases', link: '/ecosystem/use-cases' },
+              ]
+            },
+            {
               text: 'Systems',
               items: [
                 { text: 'RAG Systems', link: '/ecosystem/rag-systems' },
@@ -166,6 +173,13 @@ export default defineConfig({
             }
           ],
           '/zh-CN/ecosystem/': [
+            {
+              text: 'WikiLoop',
+              items: [
+                { text: 'WikiLoop 行业应用', link: '/zh-CN/ecosystem/wikiloop-industries' },
+                { text: '行业使用场景', link: '/zh-CN/ecosystem/use-cases' },
+              ]
+            },
             {
               text: '系统列表',
               items: [
