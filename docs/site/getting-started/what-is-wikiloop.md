@@ -1,6 +1,6 @@
 # What is WikiLoop
 
-WikiLoop is a local-first knowledge search engine for agents. It distills raw documents into a structured, reviewable Markdown wiki, then exposes two MCP tools — `kb_search` and `kb_page` — that let agents search and deep-read at their own pace.
+WikiLoop is a local-first knowledge search engine for agents. It distills raw documents into a structured, reviewable Markdown wiki, then exposes three MCP tools — `kb_search`, `kb_page`, and `kb_add` — that let agents search, read, and write knowledge at their own pace.
 
 ## Design Philosophy
 

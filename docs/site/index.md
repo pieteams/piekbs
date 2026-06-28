@@ -18,7 +18,7 @@ hero:
 
 features:
   - title: Agent-Native Search
-    details: Two MCP tools — kb_search and kb_page — let agents search iteratively and read documents in full, just like a human uses a search engine.
+    details: Three MCP tools — kb_search, kb_page, and kb_add — let agents search, read, and write knowledge, just like a human uses and builds a knowledge base.
   - title: Auditable Knowledge
     details: All knowledge is explicit Markdown — git diff, lint, and review every change. No black-box vectors.
   - title: No Embedding Required

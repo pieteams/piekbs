@@ -68,6 +68,7 @@ LLM Wiki（知识编译范式）背后的核心技术——知识在写入时预
 | [MCP 协议](https://modelcontextprotocol.io) | Model Context Protocol——Anthropic 开放标准，向 AI Agent 暴露工具/资源。支持 stdio + HTTP 双传输。 |
 | `kb_search` | FTS 关键词搜索，返回带 `related` 链接的排序结果，用于图谱导航。 |
 | `kb_page` | 通过 ID 获取完整页面内容，支持批量（最多 5 个 ID）或 `full=true` 获取不截断文本。 |
+| `kb_add` | 向知识库添加文本文档，写入 `raw/<filename>`，触发增量索引，后台异步运行提炼。 |
 | MCP Resources | 只读资源（URI 形式）：Wiki 页面、图谱 Schema、原始文档。 |
 | 迭代搜索模式 | Agent 从不同角度发出多次查询，跟随 `related` 链接，自行综合答案。 |
 | Sage Wiki MCP 工具 | 17 个工具：6 读、9 写、2 复合——Agent 可直接写入和编译知识。 |

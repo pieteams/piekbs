@@ -18,7 +18,7 @@ hero:
 
 features:
   - title: Agent 原生搜索
-    details: 两个 MCP 工具 — kb_search 和 kb_page — 让 Agent 像人使用搜索引擎一样迭代搜索、完整阅读文档。
+    details: 三个 MCP 工具 — kb_search、kb_page 和 kb_add — 让 Agent 像人使用知识库一样迭代搜索、完整阅读、主动写入知识。
   - title: 可审计的知识
     details: 所有知识都是显式 Markdown — 可以 git diff、lint 和 review 每一次变更，没有黑盒向量。
   - title: 无需 Embedding

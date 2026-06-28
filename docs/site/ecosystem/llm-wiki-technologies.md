@@ -68,6 +68,7 @@ Raw docs → LLM distills → wiki pages → [query time] → FTS / graph → re
 | [MCP protocol](https://modelcontextprotocol.io) | Model Context Protocol — Anthropic open standard for exposing tools/resources to AI agents. Supports stdio + HTTP transports. |
 | `kb_search` | FTS keyword search, returns ranked results with `related` links for graph navigation. |
 | `kb_page` | Fetch full page content by ID. Supports batch (up to 5 IDs) or `full=true` for untruncated text. |
+| `kb_add` | Add a text document to the KB. Writes to `raw/<filename>`, triggers incremental indexing, and runs distillation in the background. |
 | MCP Resources | Read-only resources (URI form): wiki pages, graph schema, raw documents. |
 | Iterative search pattern | Agent issues multiple queries from different angles, follows `related` links, synthesizes own answer. |
 | Sage Wiki MCP tools | 17 tools: 6 read, 9 write, 2 composite — agents can directly write and compile knowledge. |

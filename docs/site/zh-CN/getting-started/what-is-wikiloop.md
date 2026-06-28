@@ -1,6 +1,6 @@
 # 什么是 WikiLoop
 
-WikiLoop 是一个面向 Agent 的本地优先知识搜索引擎。它将原始文档提炼为结构化、可审计的 Markdown 知识库，然后通过两个 MCP 工具 — `kb_search` 和 `kb_page` — 让 Agent 按自己的节奏搜索和深度阅读。
+WikiLoop 是一个面向 Agent 的本地优先知识搜索引擎。它将原始文档提炼为结构化、可审计的 Markdown 知识库，然后通过三个 MCP 工具 — `kb_search`、`kb_page` 和 `kb_add` — 让 Agent 按自己的节奏搜索、阅读和写入知识。
 
 ## 设计理念
 
