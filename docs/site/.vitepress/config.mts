@@ -88,10 +88,18 @@ export default defineConfig({
           ],
           '/ecosystem/': [
             {
-              text: 'Ecosystem',
+              text: 'Systems',
               items: [
                 { text: 'RAG Systems', link: '/ecosystem/rag-systems' },
                 { text: 'LLM Wiki Systems', link: '/ecosystem/llm-wiki-systems' },
+              ]
+            },
+            {
+              text: 'Technologies',
+              items: [
+                { text: 'RAG Technologies', link: '/ecosystem/rag-technologies' },
+                { text: 'LLM Wiki Technologies', link: '/ecosystem/llm-wiki-technologies' },
+                { text: 'Paradigm Comparison', link: '/ecosystem/paradigm-comparison' },
               ]
             }
           ],
@@ -159,10 +167,18 @@ export default defineConfig({
           ],
           '/zh-CN/ecosystem/': [
             {
-              text: '生态',
+              text: '系统列表',
               items: [
                 { text: 'RAG 系统', link: '/zh-CN/ecosystem/rag-systems' },
                 { text: 'LLM Wiki 系统', link: '/zh-CN/ecosystem/llm-wiki-systems' },
+              ]
+            },
+            {
+              text: '关键技术',
+              items: [
+                { text: 'RAG 关键技术', link: '/zh-CN/ecosystem/rag-technologies' },
+                { text: 'LLM Wiki 关键技术', link: '/zh-CN/ecosystem/llm-wiki-technologies' },
+                { text: '范式对比', link: '/zh-CN/ecosystem/paradigm-comparison' },
               ]
             }
           ],
