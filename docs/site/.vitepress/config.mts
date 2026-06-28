@@ -9,6 +9,15 @@ export default defineConfig({
   },
   cleanUrls: true,
   lastUpdated: true,
+  head: [
+    ['script', { async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-FD9FS6Q7GQ' }],
+    ['script', {}, `
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-FD9FS6Q7GQ');
+    `]
+  ],
   themeConfig: {
     socialLinks: [
       { icon: 'github', link: 'https://github.com/jasen215/wikiloop' }
@@ -38,6 +47,11 @@ export default defineConfig({
             text: 'Reference',
             link: '/reference/cli',
             activeMatch: '/reference/',
+          },
+          {
+            text: 'Ecosystem',
+            link: '/ecosystem/rag-systems',
+            activeMatch: '/ecosystem/',
           },
         ],
         sidebar: {
@@ -72,6 +86,15 @@ export default defineConfig({
               ]
             }
           ],
+          '/ecosystem/': [
+            {
+              text: 'Ecosystem',
+              items: [
+                { text: 'RAG Systems', link: '/ecosystem/rag-systems' },
+                { text: 'LLM Wiki Systems', link: '/ecosystem/llm-wiki-systems' },
+              ]
+            }
+          ],
         }
       }
     },
@@ -95,6 +118,11 @@ export default defineConfig({
             text: '参考',
             link: '/zh-CN/reference/cli',
             activeMatch: '/zh-CN/reference/',
+          },
+          {
+            text: '生态',
+            link: '/zh-CN/ecosystem/rag-systems',
+            activeMatch: '/zh-CN/ecosystem/',
           },
         ],
         sidebar: {
@@ -126,6 +154,15 @@ export default defineConfig({
                 { text: 'CLI', link: '/zh-CN/reference/cli' },
                 { text: 'MCP 工具', link: '/zh-CN/reference/mcp-tools' },
                 { text: '配置', link: '/zh-CN/reference/config' },
+              ]
+            }
+          ],
+          '/zh-CN/ecosystem/': [
+            {
+              text: '生态',
+              items: [
+                { text: 'RAG 系统', link: '/zh-CN/ecosystem/rag-systems' },
+                { text: 'LLM Wiki 系统', link: '/zh-CN/ecosystem/llm-wiki-systems' },
               ]
             }
           ],

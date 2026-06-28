@@ -33,3 +33,14 @@ wikiloop-kb/
   schema/           KB-local authoring rules and page templates.
   index/            Generated artifacts (SQLite FTS index). Do not edit.
 ```
+
+## Ecosystem
+
+- [RAG Knowledge Base Systems](/ecosystem/rag-systems) — Frameworks, platforms, and vector databases in the RAG space
+- [LLM Wiki Systems](/ecosystem/llm-wiki-systems) — AI-powered wiki platforms, PKM tools, and agent memory frameworks
+
+## Learn More
+
+- [Installation](/getting-started/installation)
+- [Quick Start](/getting-started/quick-start)
+- [How Agents Use WikiLoop](/guide/how-agents-use)

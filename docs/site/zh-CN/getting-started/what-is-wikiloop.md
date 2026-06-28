@@ -33,3 +33,14 @@ wikiloop-kb/
   schema/           知识库本地的写作规则和页面模板。
   index/            生成产物（SQLite FTS 索引），勿手动编辑。
 ```
+
+## 生态
+
+- [RAG 知识库系统](/zh-CN/ecosystem/rag-systems) — RAG 领域的框架、平台和向量数据库
+- [LLM Wiki 系统](/zh-CN/ecosystem/llm-wiki-systems) — AI 驱动的 Wiki 平台、PKM 工具和 Agent 记忆框架
+
+## 了解更多
+
+- [安装](/zh-CN/getting-started/installation)
+- [快速入门](/zh-CN/getting-started/quick-start)
+- [Agent 如何使用 WikiLoop](/zh-CN/guide/how-agents-use)
