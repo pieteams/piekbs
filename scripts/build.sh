@@ -1,12 +1,12 @@
 #!/bin/bash
-# Build wikiloop for all platforms.
+# Build piekbs for all platforms.
 #
 # Usage:
 #   ./scripts/build.sh [version] [target...]
 #
 # Targets:
-#   darwin-arm64   → WikiLoop.app + .dmg  (requires macOS Apple Silicon)
-#   darwin-amd64   → WikiLoop.app + .dmg  (requires macOS Intel)
+#   darwin-arm64   → PieKBS.app + .dmg  (requires macOS Apple Silicon)
+#   darwin-amd64   → PieKBS.app + .dmg  (requires macOS Intel)
 #   linux-amd64    → tar.gz with binary
 #   linux-arm64    → tar.gz with binary
 #   windows-amd64  → zip with binary (pure Go, no CGO)
@@ -48,14 +48,14 @@ want() {
 build_darwin_arm64() {
     echo "→ building darwin-arm64 (.app + dmg) ..."
 
-    local app_dir="$OUTDIR/WikiLoop.app"
+    local app_dir="$OUTDIR/PieKBS.app"
     mkdir -p "$app_dir/Contents/MacOS"
 
     CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 \
         go build -tags fts5 \
         -ldflags "-s -w -X main.Version=${VERSION}" \
-        -o "$app_dir/Contents/MacOS/wikiloop" \
-        ./cmd/wikiloop/
+        -o "$app_dir/Contents/MacOS/piekbs" \
+        ./cmd/piekbs/
 
     mkdir -p "$app_dir/Contents"
     sed "s/1.0.0/${VERSION}/g" scripts/Info.plist > "$app_dir/Contents/Info.plist"
@@ -63,7 +63,7 @@ build_darwin_arm64() {
     mkdir -p "$app_dir/Contents/Resources/web"
     cp -r internal/webui/static/* "$app_dir/Contents/Resources/web/"
 
-    [ -f "scripts/wikiloop.icns" ] && cp scripts/wikiloop.icns "$app_dir/Contents/Resources/wikiloop.icns"
+    [ -f "scripts/piekbs.icns" ] && cp scripts/piekbs.icns "$app_dir/Contents/Resources/piekbs.icns"
 
     # Ad-hoc sign so macOS Gatekeeper accepts the app without a developer cert.
     codesign --force --deep --sign - "$app_dir" >/dev/null 2>&1 || true
@@ -74,15 +74,15 @@ build_darwin_arm64() {
     echo "  ✓ $app_dir ($app_size)"
 
     if command -v create-dmg &>/dev/null; then
-        local dmg="$OUTDIR/WikiLoop-${VERSION}-macos-arm64.dmg"
+        local dmg="$OUTDIR/PieKBS-${VERSION}-macos-arm64.dmg"
         create-dmg \
-            --volname "WikiLoop ${VERSION}" \
-            --volicon "scripts/wikiloop.icns" \
+            --volname "PieKBS ${VERSION}" \
+            --volicon "scripts/piekbs.icns" \
             --background "scripts/dmg-background.png" \
             --window-pos 200 100 \
             --window-size 660 380 \
             --icon-size 100 \
-            --icon "WikiLoop.app" 495 140 \
+            --icon "PieKBS.app" 495 140 \
             --app-drop-link 165 140 \
             "$dmg" "$app_dir" >/dev/null 2>&1 || true
         if [ -f "$dmg" ]; then
@@ -98,7 +98,7 @@ build_darwin_arm64() {
 # darwin-amd64 (macOS Intel) is not provided as a pre-built release.
 # GitHub Actions macos-13 (Intel) runner was deprecated and removed on
 # April 30, 2025. Intel Mac users can build from source:
-#   CGO_ENABLED=1 go build -tags fts5 -o wikiloop ./cmd/wikiloop/
+#   CGO_ENABLED=1 go build -tags fts5 -o piekbs ./cmd/piekbs/
 
 # ── Linux tar.gz ──────────────────────────────────────────────────────────────
 
@@ -112,18 +112,18 @@ build_linux() {
         return
     fi
 
-    local bin="$OUTDIR/wikiloop-${suffix}"
+    local bin="$OUTDIR/piekbs-${suffix}"
 
     CGO_ENABLED=1 GOOS=linux GOARCH=$goarch \
         CC="$cc" \
         go build -tags fts5 \
         -ldflags "-s -w -X main.Version=${VERSION}" \
-        -o "$bin" ./cmd/wikiloop/
+        -o "$bin" ./cmd/piekbs/
 
     local staging="$OUTDIR/.pkg-${suffix}"
-    local tarball="$OUTDIR/wikiloop-${VERSION}-${suffix}.tar.gz"
+    local tarball="$OUTDIR/piekbs-${VERSION}-${suffix}.tar.gz"
     mkdir -p "$staging"
-    cp "$bin" "$staging/wikiloop"
+    cp "$bin" "$staging/piekbs"
     tar -czf "$tarball" -C "$staging" .
     rm -r "$staging" "$bin"
 
@@ -135,19 +135,19 @@ build_linux() {
 build_windows_amd64() {
     echo "→ building windows-amd64 (zip) ..."
 
-    local bin="$OUTDIR/wikiloop.exe"
+    local bin="$OUTDIR/piekbs.exe"
     # Pure Go build — modernc.org/sqlite works without CGO.
     CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
         go build -tags fts5 \
         -ldflags "-s -w -X main.Version=${VERSION}" \
-        -o "$bin" ./cmd/wikiloop/
+        -o "$bin" ./cmd/piekbs/
 
     local staging="$OUTDIR/.pkg-windows-amd64"
-    local zipfile="$OUTDIR/wikiloop-${VERSION}-windows-amd64.zip"
+    local zipfile="$OUTDIR/piekbs-${VERSION}-windows-amd64.zip"
     mkdir -p "$staging"
-    cp "$bin" "$staging/wikiloop.exe"
+    cp "$bin" "$staging/piekbs.exe"
 
-    cd "$OUTDIR/.pkg-windows-amd64" && zip -q "../wikiloop-${VERSION}-windows-amd64.zip" * && cd - >/dev/null
+    cd "$OUTDIR/.pkg-windows-amd64" && zip -q "../piekbs-${VERSION}-windows-amd64.zip" * && cd - >/dev/null
     rm -r "$staging" "$bin"
 
     echo "  ✓ $zipfile ($(du -sh "$zipfile" | cut -f1))"
@@ -155,7 +155,7 @@ build_windows_amd64() {
 
 # ── dispatch ──────────────────────────────────────────────────────────────────
 
-echo "Building wikiloop v${VERSION}"
+echo "Building piekbs v${VERSION}"
 echo
 
 want "darwin-arm64"  && build_darwin_arm64
