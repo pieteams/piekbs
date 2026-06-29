@@ -35,7 +35,7 @@ export default defineConfig({
         nav: [
           {
             text: 'Getting Started',
-            link: '/getting-started/what-is-wikiloop',
+            link: '/getting-started/what-is-piekbs',
             activeMatch: '/getting-started/',
           },
           {
@@ -59,7 +59,7 @@ export default defineConfig({
             {
               text: 'Getting Started',
               items: [
-                { text: 'What is WikiLoop', link: '/getting-started/what-is-wikiloop' },
+                { text: 'What is PieKBS', link: '/getting-started/what-is-piekbs' },
                 { text: 'Installation', link: '/getting-started/installation' },
                 { text: 'Quick Start', link: '/getting-started/quick-start' },
               ]
@@ -69,7 +69,7 @@ export default defineConfig({
             {
               text: 'Guide',
               items: [
-                { text: 'How Agents Use WikiLoop', link: '/guide/how-agents-use' },
+                { text: 'How Agents Use PieKBS', link: '/guide/how-agents-use' },
                 { text: 'Knowledge Pipeline', link: '/guide/knowledge-pipeline' },
                 { text: 'MCP Server', link: '/guide/mcp-server' },
                 { text: 'Schema & Templates', link: '/guide/schema-templates' },
@@ -88,9 +88,9 @@ export default defineConfig({
           ],
           '/ecosystem/': [
             {
-              text: 'WikiLoop',
+              text: 'PieKBS',
               items: [
-                { text: 'WikiLoop in Industry', link: '/ecosystem/wikiloop-industries' },
+                { text: 'PieKBS in Industry', link: '/ecosystem/piekbs-industries' },
                 { text: 'Industry Use Cases', link: '/ecosystem/use-cases' },
               ]
             },
@@ -121,7 +121,7 @@ export default defineConfig({
         nav: [
           {
             text: '快速开始',
-            link: '/zh-CN/getting-started/what-is-wikiloop',
+            link: '/zh-CN/getting-started/what-is-piekbs',
             activeMatch: '/zh-CN/getting-started/',
           },
           {
@@ -145,7 +145,7 @@ export default defineConfig({
             {
               text: '快速开始',
               items: [
-                { text: '什么是 WikiLoop', link: '/zh-CN/getting-started/what-is-wikiloop' },
+                { text: '什么是 PieKBS', link: '/zh-CN/getting-started/what-is-piekbs' },
                 { text: '安装', link: '/zh-CN/getting-started/installation' },
                 { text: '快速入门', link: '/zh-CN/getting-started/quick-start' },
               ]
@@ -155,7 +155,7 @@ export default defineConfig({
             {
               text: '指南',
               items: [
-                { text: 'Agent 如何使用 WikiLoop', link: '/zh-CN/guide/how-agents-use' },
+                { text: 'Agent 如何使用 PieKBS', link: '/zh-CN/guide/how-agents-use' },
                 { text: '知识管道', link: '/zh-CN/guide/knowledge-pipeline' },
                 { text: 'MCP 服务器', link: '/zh-CN/guide/mcp-server' },
                 { text: 'Schema 与模板', link: '/zh-CN/guide/schema-templates' },
@@ -174,9 +174,9 @@ export default defineConfig({
           ],
           '/zh-CN/ecosystem/': [
             {
-              text: 'WikiLoop',
+              text: 'PieKBS',
               items: [
-                { text: 'WikiLoop 行业应用', link: '/zh-CN/ecosystem/wikiloop-industries' },
+                { text: 'PieKBS 行业应用', link: '/zh-CN/ecosystem/piekbs-industries' },
                 { text: '行业使用场景', link: '/zh-CN/ecosystem/use-cases' },
               ]
             },
