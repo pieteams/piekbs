@@ -3,9 +3,9 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'WikiLoop',
   description: 'A knowledge search engine for agents',
-  base: '/wikiloop/',
+  base: '/piekbs/',
   sitemap: {
-    hostname: 'https://jasen215.github.io/wikiloop/',
+    hostname: 'https://pieteams.github.io/piekbs/',
   },
   cleanUrls: true,
   lastUpdated: true,
