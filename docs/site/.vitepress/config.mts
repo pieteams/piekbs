@@ -1,11 +1,11 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: 'WikiLoop',
+  title: 'PieKBS',
   description: 'A knowledge search engine for agents',
-  base: '/wikiloop/',
+  base: '/piekbs/',
   sitemap: {
-    hostname: 'https://jasen215.github.io/wikiloop/',
+    hostname: 'https://pieteams.github.io/piekbs/',
   },
   cleanUrls: true,
   lastUpdated: true,
@@ -20,7 +20,7 @@ export default defineConfig({
   ],
   themeConfig: {
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/jasen215/wikiloop' }
+      { icon: 'github', link: 'https://github.com/pieteams/piekbs' }
     ],
     footer: {
       message: 'Released under the MIT License.',
