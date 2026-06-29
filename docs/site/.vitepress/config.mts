@@ -10,12 +10,12 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
   head: [
-    ['script', { async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-FD9FS6Q7GQ' }],
+    ['script', { async: '', src: 'https://www.googletagmanager.com/gtag/js?id=G-5ML1EF7E4L' }],
     ['script', {}, `
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-FD9FS6Q7GQ');
+      gtag('config', 'G-5ML1EF7E4L');
     `]
   ],
   themeConfig: {
