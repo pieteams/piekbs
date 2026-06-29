@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>wikiloop</string>
+    <string>piekbs</string>
     <key>CFBundleIdentifier</key>
-    <string>com.pieteams.wikiloop</string>
+    <string>com.pieteams.piekbs</string>
     <key>CFBundleName</key>
-    <string>WikiLoop</string>
+    <string>PieKBS</string>
     <key>CFBundleVersion</key>
     <string>1.0.0</string>
     <key>CFBundleShortVersionString</key>
@@ -17,7 +17,7 @@
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>CFBundleIconFile</key>
-    <string>wikiloop</string>
+    <string>piekbs</string>
     <key>LSUIElement</key>
     <true/>
 </dict>
