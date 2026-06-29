@@ -64,15 +64,15 @@ func startupLogPath() string {
 
 func run() error {
 	// For the serve subcommand (including the default when no args given),
-	// load WIKILOOP_* from shell rc files before flag defaults are evaluated.
+	// load PIEKBS_* from shell rc files before flag defaults are evaluated.
 	// This makes macOS GUI double-click behave identically to CLI invocation.
-	// Must happen before flag.String() so envOr("WIKILOOP_KB",...) sees the value.
+	// Must happen before flag.String() so envOr("PIEKBS_KB",...) sees the value.
 	if isServeInvocation() {
 		loadShellEnv()
 	}
 
 	// Global flags — must be parsed before subcommand.
-	kbRoot := flag.String("kb", envOr("WIKILOOP_KB", defaultKBRoot()), "knowledge-base root directory")
+	kbRoot := flag.String("kb", envOr("PIEKBS_KB", defaultKBRoot()), "knowledge-base root directory")
 	flag.Parse()
 
 	args := flag.Args()
@@ -179,10 +179,10 @@ func preflightCheck(kbRoot string, cfg *config.Config) error {
 	var warns []string
 	var fatal string
 
-	// 1. WIKILOOP_KB / KB path: must be an absolute, writable directory.
-	if v, ok := os.LookupEnv("WIKILOOP_KB"); ok && strings.HasPrefix(v, "~") {
+	// 1. PIEKBS_KB / KB path: must be an absolute, writable directory.
+	if v, ok := os.LookupEnv("PIEKBS_KB"); ok && strings.HasPrefix(v, "~") {
 		warns = append(warns, fmt.Sprintf(
-			"WIKILOOP_KB=%q contains an unexpanded '~'. Use an absolute path or $HOME.", v))
+			"PIEKBS_KB=%q contains an unexpanded '~'. Use an absolute path or $HOME.", v))
 	}
 	if !filepath.IsAbs(kbRoot) {
 		warns = append(warns, fmt.Sprintf(
@@ -918,11 +918,11 @@ func expandHome(p string) string {
 	return p
 }
 
-// loadShellEnv reads WIKILOOP_* variables from shell rc files and sets them
+// loadShellEnv reads PIEKBS_* variables from shell rc files and sets them
 // in the process environment if not already set. This allows macOS GUI apps
 // (which don't inherit shell env) to behave identically to CLI invocations.
 // Sources tried in order: ~/.zshenv, ~/.zshrc, ~/.bash_profile, ~/.bashrc, ~/.profile.
-// NOTE: must be called before flag.String() reads WIKILOOP_KB via envOr.
+// NOTE: must be called before flag.String() reads PIEKBS_KB via envOr.
 func loadShellEnv() {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -935,9 +935,9 @@ func loadShellEnv() {
 
 // parseEnvFile scans a shell rc file for lines of the form:
 //
-//	export WIKILOOP_FOO=bar
-//	export WIKILOOP_FOO="bar"
-//	WIKILOOP_FOO=bar
+//	export PIEKBS_FOO=bar
+//	export PIEKBS_FOO="bar"
+//	PIEKBS_FOO=bar
 //
 // and sets them in the process environment if not already present.
 // Inline comments (# ...) and surrounding quotes are stripped.
@@ -955,7 +955,7 @@ func parseEnvFile(path string) {
 		line = strings.TrimPrefix(line, "export ")
 		k, v, ok := strings.Cut(line, "=")
 		k = strings.TrimSpace(k)
-		if !ok || !strings.HasPrefix(k, "WIKILOOP_") {
+		if !ok || !strings.HasPrefix(k, "PIEKBS_") {
 			continue
 		}
 		// Strip inline comments (unquoted only).

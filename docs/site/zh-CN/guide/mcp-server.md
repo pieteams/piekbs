@@ -9,7 +9,7 @@ PieKBS 通过 MCP 协议暴露知识库工具，支持两种传输模式。
 **启动 PieKBS：**
 
 ```bash
-export WIKILOOP_KB=/path/to/piekbs-kb
+export PIEKBS_KB=/path/to/piekbs-kb
 piekbs serve
 ```
 
@@ -22,7 +22,7 @@ piekbs serve
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
-        "x-api-key": "${WIKILOOP_API_KEY}"
+        "x-api-key": "${PIEKBS_API_KEY}"
       }
     }
   }
@@ -43,7 +43,7 @@ piekbs serve
       "command": "/path/to/piekbs",
       "args": ["stdio"],
       "env": {
-        "WIKILOOP_KB": "/path/to/your-kb"
+        "PIEKBS_KB": "/path/to/your-kb"
       }
     }
   }

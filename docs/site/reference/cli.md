@@ -1,6 +1,6 @@
 # CLI Reference
 
-All commands accept a global `--kb <path>` flag (defaults to `$WIKILOOP_KB`, then `~/piekbs-kb`).
+All commands accept a global `--kb <path>` flag (defaults to `$PIEKBS_KB`, then `~/piekbs-kb`).
 
 ## Commands
 
@@ -27,4 +27,4 @@ piekbs service status
 piekbs service uninstall
 ```
 
-Logs: `{WIKILOOP_KB}/index/watcher.log`
+Logs: `{PIEKBS_KB}/index/watcher.log`

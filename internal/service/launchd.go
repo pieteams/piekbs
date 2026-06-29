@@ -21,7 +21,7 @@ const launchdTemplate = `<?xml version="1.0" encoding="UTF-8"?>
     </array>
     <key>EnvironmentVariables</key>
     <dict>
-        <key>WIKILOOP_KB</key>
+        <key>PIEKBS_KB</key>
         <string>{{.KBRoot}}</string>
         <key>PATH</key>
         <string>{{.Path}}</string>

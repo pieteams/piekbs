@@ -149,38 +149,38 @@ func Load(kbRoot string) (*Config, error) {
 		}
 	}
 
-	if v := os.Getenv("WIKILOOP_API_KEY"); v != "" {
+	if v := os.Getenv("PIEKBS_API_KEY"); v != "" {
 		cfg.Server.APIKey = v
 	}
-	if v := os.Getenv("WIKILOOP_HOST"); v != "" {
+	if v := os.Getenv("PIEKBS_HOST"); v != "" {
 		cfg.Server.Host = v
 	}
-	if v := os.Getenv("WIKILOOP_PORT"); v != "" {
+	if v := os.Getenv("PIEKBS_PORT"); v != "" {
 		if port, err := strconv.Atoi(v); err == nil {
 			cfg.Server.Port = port
 		}
 	}
-	if v := os.Getenv("WIKILOOP_DISTILL_BASE_URL"); v != "" {
+	if v := os.Getenv("PIEKBS_DISTILL_BASE_URL"); v != "" {
 		cfg.Distill.BaseURL = v
 	}
-	if v := os.Getenv("WIKILOOP_DISTILL_TOKEN"); v != "" {
+	if v := os.Getenv("PIEKBS_DISTILL_TOKEN"); v != "" {
 		cfg.Distill.Token = v
 	}
-	if v := os.Getenv("WIKILOOP_DISTILL_MODEL"); v != "" {
+	if v := os.Getenv("PIEKBS_DISTILL_MODEL"); v != "" {
 		cfg.Distill.Model = v
 	}
-	if v := os.Getenv("WIKILOOP_DISTILL_API_TYPE"); v != "" {
+	if v := os.Getenv("PIEKBS_DISTILL_API_TYPE"); v != "" {
 		cfg.Distill.APIType = v
 	}
-	if v := os.Getenv("WIKILOOP_EMBEDDING_IDLE_TIMEOUT"); v != "" {
+	if v := os.Getenv("PIEKBS_EMBEDDING_IDLE_TIMEOUT"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			cfg.Embedding.IdleTimeout = d
 		}
 	}
-	if v := os.Getenv("WIKILOOP_ORT_LIB"); v != "" {
+	if v := os.Getenv("PIEKBS_ORT_LIB"); v != "" {
 		cfg.Runtime.OrtLib = v
 	}
-	if v := os.Getenv("WIKILOOP_SQLITE_VEC"); v != "" {
+	if v := os.Getenv("PIEKBS_SQLITE_VEC"); v != "" {
 		cfg.Runtime.SqliteVec = v
 	}
 

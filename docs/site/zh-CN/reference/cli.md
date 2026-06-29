@@ -1,6 +1,6 @@
 # CLI 参考
 
-所有命令支持全局 `--kb <path>` 参数（默认依次使用 `$WIKILOOP_KB`、`~/piekbs-kb`）。
+所有命令支持全局 `--kb <path>` 参数（默认依次使用 `$PIEKBS_KB`、`~/piekbs-kb`）。
 
 ## 命令列表
 
@@ -27,4 +27,4 @@ piekbs service status
 piekbs service uninstall
 ```
 
-日志：`{WIKILOOP_KB}/index/watcher.log`
+日志：`{PIEKBS_KB}/index/watcher.log`
