@@ -3,7 +3,7 @@
 ## 1. Initialize a Knowledge Base
 
 ```bash
-export WIKILOOP_KB=/path/to/your-kb
+export PIEKBS_KB=/path/to/your-kb
 
 piekbs init    # scaffold KB dirs and copy schema/templates
 piekbs serve   # start server: MCP + Web UI + file watcher
@@ -24,7 +24,7 @@ Add to `~/.claude.json` under `mcpServers`:
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
-        "x-api-key": "${WIKILOOP_API_KEY}"
+        "x-api-key": "${PIEKBS_API_KEY}"
       }
     }
   }
@@ -43,7 +43,7 @@ Add to `~/.claude.json` under `mcpServers`:
       "command": "/path/to/piekbs",
       "args": ["stdio"],
       "env": {
-        "WIKILOOP_KB": "/path/to/your-kb"
+        "PIEKBS_KB": "/path/to/your-kb"
       }
     }
   }
@@ -55,7 +55,7 @@ Add to `~/.claude.json` under `mcpServers`:
 Drop any Markdown file into `raw/`. The watcher automatically distills it.
 
 ```bash
-cp my-notes.md $WIKILOOP_KB/raw/
+cp my-notes.md $PIEKBS_KB/raw/
 # watcher detects the file and triggers distill + reindex automatically
 ```
 

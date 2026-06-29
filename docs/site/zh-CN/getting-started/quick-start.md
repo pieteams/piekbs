@@ -3,7 +3,7 @@
 ## 1. 初始化知识库
 
 ```bash
-export WIKILOOP_KB=/path/to/your-kb
+export PIEKBS_KB=/path/to/your-kb
 
 piekbs init    # 初始化目录结构，复制 schema/templates
 piekbs serve   # 启动服务：MCP + Web UI + 文件监听
@@ -24,7 +24,7 @@ piekbs serve   # 启动服务：MCP + Web UI + 文件监听
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
-        "x-api-key": "${WIKILOOP_API_KEY}"
+        "x-api-key": "${PIEKBS_API_KEY}"
       }
     }
   }
@@ -43,7 +43,7 @@ piekbs serve   # 启动服务：MCP + Web UI + 文件监听
       "command": "/path/to/piekbs",
       "args": ["stdio"],
       "env": {
-        "WIKILOOP_KB": "/path/to/your-kb"
+        "PIEKBS_KB": "/path/to/your-kb"
       }
     }
   }
@@ -55,7 +55,7 @@ piekbs serve   # 启动服务：MCP + Web UI + 文件监听
 将任意 Markdown 文件放入 `raw/` 目录，watcher 会自动提炼。
 
 ```bash
-cp my-notes.md $WIKILOOP_KB/raw/
+cp my-notes.md $PIEKBS_KB/raw/
 # watcher 检测到文件变化后自动触发提炼 + 重建索引
 ```
 

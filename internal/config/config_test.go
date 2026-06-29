@@ -119,10 +119,10 @@ embedding:
 
 func TestLoadConfig_EnvOverride(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("WIKILOOP_API_KEY", "envkey")
-	t.Setenv("WIKILOOP_PORT", "7777")
-	t.Setenv("WIKILOOP_DISTILL_TOKEN", "deepseek-secret")
-	t.Setenv("WIKILOOP_DISTILL_API_TYPE", "openai")
+	t.Setenv("PIEKBS_API_KEY", "envkey")
+	t.Setenv("PIEKBS_PORT", "7777")
+	t.Setenv("PIEKBS_DISTILL_TOKEN", "deepseek-secret")
+	t.Setenv("PIEKBS_DISTILL_API_TYPE", "openai")
 
 	cfg, err := Load(dir)
 	if err != nil {

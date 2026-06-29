@@ -35,7 +35,7 @@ After=network.target
 
 [Service]
 Type=simple
-Environment=WIKILOOP_KB=%s
+Environment=PIEKBS_KB=%s
 Environment=PATH=%s
 ExecStart=%s
 Restart=on-failure

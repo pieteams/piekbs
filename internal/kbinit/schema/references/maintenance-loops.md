@@ -55,4 +55,4 @@ When the CLI is available (`piekbs`), prefer these over manual directory scannin
 - To validate the KB: `piekbs lint`
 - To check index state: `piekbs status`
 
-Set `WIKILOOP_KB=/path/to/piekbs-kb` to avoid typing `--kb` on every command.
+Set `PIEKBS_KB=/path/to/piekbs-kb` to avoid typing `--kb` on every command.

@@ -202,7 +202,7 @@ Les prompts de distillation/synthèse lisent ces modèles, donc les modifier per
 ## Démarrage rapide
 
 ```bash
-export WIKILOOP_KB=/path/to/your-kb
+export PIEKBS_KB=/path/to/your-kb
 
 piekbs init           # créer les répertoires KB et copier schema/modèles
 piekbs serve          # démarrer le serveur : MCP + Web UI + watcher de fichiers
@@ -213,7 +213,7 @@ piekbs lint           # vérifier les pages wiki
 
 ## Référence des commandes
 
-Toutes les commandes acceptent un flag global `--kb <path>` (par défaut `$WIKILOOP_KB`, puis `~/piekbs-kb`).
+Toutes les commandes acceptent un flag global `--kb <path>` (par défaut `$PIEKBS_KB`, puis `~/piekbs-kb`).
 
 | Commande | Description |
 |---|---|
@@ -247,7 +247,7 @@ Le mode HTTP est recommandé : un seul processus PieKBS partagé par tous les ag
 **Étape 1 : Démarrer PieKBS**
 
 ```bash
-export WIKILOOP_KB=/path/to/piekbs-kb
+export PIEKBS_KB=/path/to/piekbs-kb
 piekbs serve
 ```
 
@@ -264,7 +264,7 @@ Ajouter à `~/.claude.json` sous `mcpServers` :
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
-        "x-api-key": "${WIKILOOP_API_KEY}"
+        "x-api-key": "${PIEKBS_API_KEY}"
       }
     }
   }
@@ -300,7 +300,7 @@ markitdown --version
 
 > Vérifié sur OpenClaw/Hermes (chemin : `/root/.openclaw/workspace/bin/markitdown`). Ajoutez `workspace/bin` au PATH ou définissez le chemin complet dans votre environnement.
 
-Si markitdown n'est pas disponible, les agents peuvent extraire le texte eux-mêmes (avec LLM vision ou d'autres outils) et écrire le résultat directement dans `$WIKILOOP_KB/raw/converted/<slug>.md` — le watcher le récupère automatiquement.
+Si markitdown n'est pas disponible, les agents peuvent extraire le texte eux-mêmes (avec LLM vision ou d'autres outils) et écrire le résultat directement dans `$PIEKBS_KB/raw/converted/<slug>.md` — le watcher le récupère automatiquement.
 
 **3. Configuration MCP :**
 
@@ -312,7 +312,7 @@ mcp_servers:
     command: /root/.openclaw/piekbs/piekbs
     args: [stdio]
     env:
-      WIKILOOP_KB: /root/.openclaw/piekbs-kb
+      PIEKBS_KB: /root/.openclaw/piekbs-kb
       PATH: /root/.openclaw/workspace/bin:/usr/local/bin:/usr/bin:/bin
 ```
 
@@ -324,8 +324,8 @@ Les agents avec accès `write_file` peuvent écrire directement dans la KB — l
 
 | Type de contenu | Écrire dans |
 |---|---|
-| Articles, notes, références (Markdown/texte) | `$WIKILOOP_KB/raw/<votre-catégorie>/<slug>.md` |
-| Contenu PDF/Word/Excel/EPUB converti par agent | `$WIKILOOP_KB/raw/converted/<slug>.md` |
+| Articles, notes, références (Markdown/texte) | `$PIEKBS_KB/raw/<votre-catégorie>/<slug>.md` |
+| Contenu PDF/Word/Excel/EPUB converti par agent | `$PIEKBS_KB/raw/converted/<slug>.md` |
 
 Les fichiers dans `raw/converted/` sont traités comme déjà convertis et vont directement à la distillation, sautant l'étape markitdown. Tous les autres chemins sous `raw/` sont traités par le pipeline complet (convertir → indexer → distiller).
 
@@ -343,4 +343,4 @@ piekbs service status
 piekbs service uninstall
 ```
 
-Journaux : `{WIKILOOP_KB}/index/watcher.log`
+Journaux : `{PIEKBS_KB}/index/watcher.log`

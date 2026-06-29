@@ -202,7 +202,7 @@ The distill/synthesize prompts read these templates, so editing them customizes 
 ## Quick Start
 
 ```bash
-export WIKILOOP_KB=/path/to/your-kb
+export PIEKBS_KB=/path/to/your-kb
 
 piekbs init           # scaffold KB dirs and copy schema/templates
 piekbs serve          # start server: MCP + Web UI + file watcher
@@ -213,7 +213,7 @@ piekbs lint           # health-check wiki pages
 
 ## Command Reference
 
-All commands accept a global `--kb <path>` flag (defaults to `$WIKILOOP_KB`, then `~/piekbs-kb`).
+All commands accept a global `--kb <path>` flag (defaults to `$PIEKBS_KB`, then `~/piekbs-kb`).
 
 | Command | Description |
 |---|---|
@@ -247,7 +247,7 @@ HTTP mode is recommended: one PieKBS process shared by all agents — Claude Cod
 **Step 1: Start PieKBS**
 
 ```bash
-export WIKILOOP_KB=/path/to/piekbs-kb
+export PIEKBS_KB=/path/to/piekbs-kb
 piekbs serve
 ```
 
@@ -264,7 +264,7 @@ Add to `~/.claude.json` under `mcpServers`:
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
-        "x-api-key": "${WIKILOOP_API_KEY}"
+        "x-api-key": "${PIEKBS_API_KEY}"
       }
     }
   }
@@ -300,7 +300,7 @@ markitdown --version
 
 > Verified working on OpenClaw/Hermes (path: `/root/.openclaw/workspace/bin/markitdown`). Add `workspace/bin` to PATH or set the full path in your environment.
 
-If markitdown is unavailable, agents can extract text themselves (using LLM vision or other tools) and write the result directly to `$WIKILOOP_KB/raw/converted/<slug>.md` — the watcher picks it up automatically.
+If markitdown is unavailable, agents can extract text themselves (using LLM vision or other tools) and write the result directly to `$PIEKBS_KB/raw/converted/<slug>.md` — the watcher picks it up automatically.
 
 **3. MCP configuration:**
 
@@ -312,7 +312,7 @@ mcp_servers:
     command: /root/.openclaw/piekbs/piekbs
     args: [stdio]
     env:
-      WIKILOOP_KB: /root/.openclaw/piekbs-kb
+      PIEKBS_KB: /root/.openclaw/piekbs-kb
       PATH: /root/.openclaw/workspace/bin:/usr/local/bin:/usr/bin:/bin
 ```
 
@@ -324,8 +324,8 @@ Agents with `write_file` access can write directly into the KB — the watcher d
 
 | Content type | Write to |
 |---|---|
-| Articles, notes, references (Markdown/text) | `$WIKILOOP_KB/raw/<your-category>/<slug>.md` |
-| Agent-converted PDF / Word / Excel / EPUB content | `$WIKILOOP_KB/raw/converted/<slug>.md` |
+| Articles, notes, references (Markdown/text) | `$PIEKBS_KB/raw/<your-category>/<slug>.md` |
+| Agent-converted PDF / Word / Excel / EPUB content | `$PIEKBS_KB/raw/converted/<slug>.md` |
 
 Files in `raw/converted/` are treated as already-converted and go straight to distillation, skipping the markitdown step. All other paths under `raw/` are processed through the full pipeline (convert → index → distill).
 
@@ -343,4 +343,4 @@ piekbs service status
 piekbs service uninstall
 ```
 
-Logs: `{WIKILOOP_KB}/index/watcher.log`
+Logs: `{PIEKBS_KB}/index/watcher.log`
