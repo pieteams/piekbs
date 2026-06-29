@@ -14,7 +14,7 @@
   </p>
   <p>
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
-    <a href="https://github.com/pieteams/piekbs/releases"><img src="https://img.shields.io/github/v/release/jasen215/piekbs" alt="Release"></a>
+    <a href="https://github.com/pieteams/piekbs/releases"><img src="https://img.shields.io/github/v/release/pieteams/piekbs" alt="Release"></a>
     <img src="https://img.shields.io/badge/go-1.25+-00ADD8.svg" alt="Go Version">
     <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blue" alt="Platform">
   </p>
