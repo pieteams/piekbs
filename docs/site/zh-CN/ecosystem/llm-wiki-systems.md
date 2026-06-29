@@ -59,5 +59,5 @@ AI 驱动的 Wiki 平台、知识管理工具和 LLM 知识库系统精选列表
 | [GBrain](https://github.com/garrytan/gbrain) | Garry Tan（YC CEO） | — | 知识操作系统。处理多源、多媒体输入（语音转录等），持续更新结构化知识图谱，为 Agent 提供长期记忆的运行层基础设施。 |
 | [Sage Wiki](https://github.com/joneyao/sage-wiki) | 社区 | — | Go 单二进制 LLM Wiki 实现，分层编译支持 10 万+文档，混合搜索（FTS+向量+本体图谱），提供 17 个 MCP 工具，相比朴素 RAG 最高节省 95% token。 |
 | [Walnut](https://github.com/wimham/walnut) | 社区 | — | 本地优先 AI 知识管理 Agent，BYOK 模式（OpenAI/Claude/任意供应商），自动整理文档，在写作时主动推荐关联历史笔记。 |
-| [WikiLoop](https://github.com/jasen215/wikiloop) | — | — | 面向 Agent 的本地优先知识搜索引擎，将原始文档提炼为结构化 Markdown 知识库，通过 MCP 提供搜索和阅读能力。 |
+| [PieKBS](https://github.com/pieteams/piekbs) | — | — | 面向 Agent 的本地优先知识搜索引擎，将原始文档提炼为结构化 Markdown 知识库，通过 MCP 提供搜索和阅读能力。 |
 | [Mintlify](https://mintlify.com) | Mintlify | — | 面向开发者的 AI 文档生成，自动从代码生成 Wiki/API 文档。 |

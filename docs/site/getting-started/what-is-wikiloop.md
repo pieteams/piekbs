@@ -1,16 +1,16 @@
-# What is WikiLoop
+# What is PieKBS
 
-WikiLoop is a local-first knowledge search engine for agents. It distills raw documents into a structured, reviewable Markdown wiki, then exposes three MCP tools — `kb_search`, `kb_page`, and `kb_add` — that let agents search, read, and write knowledge at their own pace.
+PieKBS is a local-first knowledge search engine for agents. It distills raw documents into a structured, reviewable Markdown wiki, then exposes three MCP tools — `kb_search`, `kb_page`, and `kb_add` — that let agents search, read, and write knowledge at their own pace.
 
 ## Design Philosophy
 
-WikiLoop is built around one observation: **agents use external knowledge tools the same way humans use search engines** — they issue multiple queries from different angles, follow links, and synthesize their own conclusions. They do not want a pre-packaged answer; they want the raw materials to form their own.
+PieKBS is built around one observation: **agents use external knowledge tools the same way humans use search engines** — they issue multiple queries from different angles, follow links, and synthesize their own conclusions. They do not want a pre-packaged answer; they want the raw materials to form their own.
 
-This means WikiLoop's job is not to answer questions. It is to make sure that when an agent searches for something, it finds the right documents — and can read them in full.
+This means PieKBS's job is not to answer questions. It is to make sure that when an agent searches for something, it finds the right documents — and can read them in full.
 
-## WikiLoop vs RAG
+## PieKBS vs RAG
 
-| | RAG | WikiLoop |
+| | RAG | PieKBS |
 |---|---|---|
 | Knowledge form | Implicit (vectors or chunks) | Explicit (Markdown, auditable) |
 | Agent role | Passive receiver of context | Active searcher and reader |
@@ -22,7 +22,7 @@ This means WikiLoop's job is not to answer questions. It is to make sure that wh
 ## KB Structure
 
 ```text
-wikiloop-kb/
+piekbs-kb/
   raw/              Source of truth — drop files here, watcher auto-distills.
   wiki/
     source-notes/   One distilled note per raw document. FTS search target.
@@ -43,4 +43,4 @@ wikiloop-kb/
 
 - [Installation](/getting-started/installation)
 - [Quick Start](/getting-started/quick-start)
-- [How Agents Use WikiLoop](/guide/how-agents-use)
+- [How Agents Use PieKBS](/guide/how-agents-use)

@@ -9,21 +9,21 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/jasen215/wikiloop/internal/kb"
+	"github.com/pieteams/piekbs/internal/kb"
 	"github.com/mark3labs/mcp-go/mcp"
 	mcpserver "github.com/mark3labs/mcp-go/server"
 )
 
-const serverInstructions = `WikiLoop is a knowledge search engine for this project. It stores distilled
+const serverInstructions = `PieKBS is a knowledge search engine for this project. It stores distilled
 wiki pages (source-notes, concepts, comparisons, decisions) and the raw source
 documents they cite. Use it like a search engine: search with multiple keyword
 combinations to discover relevant documents, then deep-read the ones that matter.
 
-WikiLoop provides MATERIALS for you to synthesize — it does not generate answers.
+PieKBS provides MATERIALS for you to synthesize — it does not generate answers.
 You are expected to search iteratively, cross-verify with other sources, and form
 your own conclusions.
 
-WHEN TO USE WikiLoop:
+WHEN TO USE PieKBS:
   - The user asks "why did we…", "how was this designed", "what was the plan/spec".
   - You need project background, design decisions, or rationale not in the code.
   - You suspect prior art exists ("have we solved this before?").
@@ -55,8 +55,8 @@ QUERY EXPANSION (mandatory):
 
 DO NOT:
   - Repeat the same query — it returns identical results, switch keywords instead
-  - Expect WikiLoop to give you the answer — synthesize from what you find
-  - Use WikiLoop for questions answerable from current code or git history
+  - Expect PieKBS to give you the answer — synthesize from what you find
+  - Use PieKBS for questions answerable from current code or git history
 
 CITATION RULES (mandatory):
   - Always cite source paths in your answer using the id/path field.
@@ -76,7 +76,7 @@ func Start(addr, kbRoot, apiKey string) error {
 // OpenClaw, etc.). Blocks until stdin is closed or the process receives a signal.
 func ServeStdio(kbRoot, apiKey string) error {
 	s := mcpserver.NewMCPServer(
-		"wikiloop",
+		"piekbs",
 		"1.0.0",
 		mcpserver.WithToolCapabilities(false),
 		mcpserver.WithInstructions(serverInstructions),
@@ -93,7 +93,7 @@ func RegisterRoutes(mux *http.ServeMux, kbRoot string, apiKey ...string) {
 		key = apiKey[0]
 	}
 	s := mcpserver.NewMCPServer(
-		"wikiloop",
+		"piekbs",
 		"1.0.0",
 		mcpserver.WithToolCapabilities(false),
 		mcpserver.WithInstructions(serverInstructions),
@@ -110,13 +110,13 @@ func RegisterRoutes(mux *http.ServeMux, kbRoot string, apiKey ...string) {
 
 // registerTools adds agent-facing KB tools to s.
 // Admin tools (kb_status, kb_reindex, kb_lint) are intentionally excluded —
-// use the Web UI or CLI instead: wikiloop status / wikiloop index / wikiloop lint
+// use the Web UI or CLI instead: piekbs status / piekbs index / piekbs lint
 func registerTools(s *mcpserver.MCPServer, kbRoot string, embedder kb.Embedder) {
 	// kb_status, kb_reindex, kb_lint removed from MCP — available via Web UI and CLI.
 
 	// kb_search ──────────────────────────────────────────────────────────────
 	searchTool := mcp.NewTool("kb_search",
-		mcp.WithDescription("Search the WikiLoop knowledge base (FTS) and return ranked results."),
+		mcp.WithDescription("Search the PieKBS knowledge base (FTS) and return ranked results."),
 		mcp.WithString("query", mcp.Required(), mcp.Description("Search query")),
 		mcp.WithString("layer", mcp.Description("Filter layer: wiki, raw, or schema")),
 		mcp.WithString("kind", mcp.Description("Filter page kind: source-note, concept, comparison, decision")),

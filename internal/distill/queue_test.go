@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jasen215/wikiloop/internal/kb"
+	"github.com/pieteams/piekbs/internal/kb"
 )
 
 func setupQueueDB(t *testing.T) (*sql.DB, string) {

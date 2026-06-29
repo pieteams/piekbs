@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/jasen215/wikiloop/internal/kb"
+	"github.com/pieteams/piekbs/internal/kb"
 )
 
 type distillFunc func(Config, string, string, kb.Embedder) error

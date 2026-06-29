@@ -304,7 +304,7 @@ func renderDocument(url, documentID string, revisionID int64, content string) st
 source_url: %q
 lark_document_id: %q
 lark_revision_id: %d
-importer: "wikiloop-lark"
+importer: "piekbs-lark"
 ---
 
 %s
@@ -317,7 +317,7 @@ func renderTableReference(filename string, ref tableRef, fields []string, rowCou
 > - Rows: %d
 > - Fields: %s
 > - Original snapshot: [%s](%s)
-> - Availability: Preserved for audit; WikiLoop indexes the deduplicated dataset below.
+> - Availability: Preserved for audit; PieKBS indexes the deduplicated dataset below.
 > - Lark table ID: %s
 `, rowCount, strings.Join(fields, ", "), filename, filename, ref.TableID)
 }

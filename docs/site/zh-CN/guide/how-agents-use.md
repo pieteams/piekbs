@@ -1,6 +1,6 @@
-# Agent 如何使用 WikiLoop
+# Agent 如何使用 PieKBS
 
-Agent 通过两个 MCP 工具与 WikiLoop 交互。
+Agent 通过两个 MCP 工具与 PieKBS 交互。
 
 ## kb_search
 
@@ -35,7 +35,7 @@ Agent 应该：
 - 跨来源交叉验证
 - 自行形成结论
 
-WikiLoop 提供**原始材料** — 不生成答案。
+PieKBS 提供**原始材料** — 不生成答案。
 
 ## 查询扩展
 

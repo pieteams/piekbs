@@ -69,7 +69,7 @@ How RAG and LLM Wiki knowledge bases are used across industries — what gets st
 | Code review assist | Reviewers | AI retrieves similar historical PRs and decisions |
 | Incident response | SRE/DevOps | Quickly retrieve runbooks, historical incident handling records |
 
-**Approach:** LLM Wiki-primary for architecture design, concepts, specs (ideal WikiLoop use case). RAG for unstructured docs (Confluence, Jira, Slack archives). Combined: WikiLoop holds stable knowledge; RAG handles latest Issues/PRs. Tools: GitHub Copilot Enterprise, Glean, Guru.
+**Approach:** LLM Wiki-primary for architecture design, concepts, specs (ideal PieKBS use case). RAG for unstructured docs (Confluence, Jira, Slack archives). Combined: PieKBS holds stable knowledge; RAG handles latest Issues/PRs. Tools: GitHub Copilot Enterprise, Glean, Guru.
 
 ---
 
@@ -183,22 +183,22 @@ How RAG and LLM Wiki knowledge bases are used across industries — what gets st
 
 ---
 
-## WikiLoop Specifically
+## PieKBS Specifically
 
-WikiLoop's local-first, MCP-native, FTS-based design fits a particular profile in each industry:
+PieKBS's local-first, MCP-native, FTS-based design fits a particular profile in each industry:
 
-| Industry | WikiLoop Fit | Specific Use |
+| Industry | PieKBS Fit | Specific Use |
 |---|---|---|
 | **Law firms** | High | Compile case research notes, decision records, client matter summaries into auditable Wiki |
 | **Accounting firms** | High | Structured GAAP concept library, internal engagement methodology Wiki |
 | **Manufacturing** | Medium | Plant SOPs, equipment glossary, onboarding knowledge base — stable content only |
-| **Software dev** | Very High | ADR library, architecture knowledge base, team onboarding Wiki — WikiLoop's sweet spot |
+| **Software dev** | Very High | ADR library, architecture knowledge base, team onboarding Wiki — PieKBS's sweet spot |
 | **Customer service** | Medium | Standard script Wiki, stable policy reference — combine with RAG for dynamic product data |
 | **Healthcare** | High | Internal clinical SOPs, nursing pathway Wiki — private deployment satisfies HIPAA |
 | **Financial services** | High | Internal compliance process Wiki, product knowledge base — air-gapped deployment |
 | **Education** | High | Course structure Wiki, institutional knowledge base, research synthesis |
 | **Government** | High | Policy interpretation Wiki, citizen FAQ base — sovereign deployment requirement met |
-| **Research teams** | Very High | Literature synthesis, concept graphs, decision records — core WikiLoop use case |
+| **Research teams** | Very High | Literature synthesis, concept graphs, decision records — core PieKBS use case |
 
 ---
 

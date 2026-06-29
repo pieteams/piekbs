@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jasen215/wikiloop/internal/config"
-	"github.com/jasen215/wikiloop/internal/larkimport"
+	"github.com/pieteams/piekbs/internal/config"
+	"github.com/pieteams/piekbs/internal/larkimport"
 )
 
 func newTestServer(t *testing.T) (*Server, string) {

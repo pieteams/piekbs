@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jasen215/wikiloop/internal/kb"
+	"github.com/pieteams/piekbs/internal/kb"
 )
 
 // fakeDistillFile 替换 DistillFile，写一个假 source-note 表示"蒸馏成功"

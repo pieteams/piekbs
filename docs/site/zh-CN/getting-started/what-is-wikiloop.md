@@ -1,16 +1,16 @@
-# 什么是 WikiLoop
+# 什么是 PieKBS
 
-WikiLoop 是一个面向 Agent 的本地优先知识搜索引擎。它将原始文档提炼为结构化、可审计的 Markdown 知识库，然后通过三个 MCP 工具 — `kb_search`、`kb_page` 和 `kb_add` — 让 Agent 按自己的节奏搜索、阅读和写入知识。
+PieKBS 是一个面向 Agent 的本地优先知识搜索引擎。它将原始文档提炼为结构化、可审计的 Markdown 知识库，然后通过三个 MCP 工具 — `kb_search`、`kb_page` 和 `kb_add` — 让 Agent 按自己的节奏搜索、阅读和写入知识。
 
 ## 设计理念
 
-WikiLoop 基于一个核心观察：**Agent 使用外部知识工具的方式和人使用搜索引擎完全一样** — 从不同角度发出多次查询、跟随链接、自行综合结论。它们不需要一个预先打包好的答案，而是需要形成自己结论所需的原始材料。
+PieKBS 基于一个核心观察：**Agent 使用外部知识工具的方式和人使用搜索引擎完全一样** — 从不同角度发出多次查询、跟随链接、自行综合结论。它们不需要一个预先打包好的答案，而是需要形成自己结论所需的原始材料。
 
-因此 WikiLoop 的工作不是回答问题，而是确保当 Agent 搜索某个内容时，能找到正确的文档，并能完整阅读。
+因此 PieKBS 的工作不是回答问题，而是确保当 Agent 搜索某个内容时，能找到正确的文档，并能完整阅读。
 
-## WikiLoop vs RAG
+## PieKBS vs RAG
 
-| | RAG | WikiLoop |
+| | RAG | PieKBS |
 |---|---|---|
 | 知识形式 | 隐式（向量或 chunk） | 显式（Markdown，可审计） |
 | Agent 角色 | 被动接收上下文 | 主动搜索和阅读 |
@@ -22,7 +22,7 @@ WikiLoop 基于一个核心观察：**Agent 使用外部知识工具的方式和
 ## 知识库结构
 
 ```text
-wikiloop-kb/
+piekbs-kb/
   raw/              原始材料 — 放入文件，watcher 自动提炼。
   wiki/
     source-notes/   每个原始文档对应一个提炼笔记，FTS 搜索目标。
@@ -43,4 +43,4 @@ wikiloop-kb/
 
 - [安装](/zh-CN/getting-started/installation)
 - [快速入门](/zh-CN/getting-started/quick-start)
-- [Agent 如何使用 WikiLoop](/zh-CN/guide/how-agents-use)
+- [Agent 如何使用 PieKBS](/zh-CN/guide/how-agents-use)

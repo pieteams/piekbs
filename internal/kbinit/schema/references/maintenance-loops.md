@@ -1,6 +1,6 @@
 # Maintenance Loops
 
-WikiLoop works by repeating small knowledge maintenance loops. Do not treat the KB as a place to dump summaries.
+PieKBS works by repeating small knowledge maintenance loops. Do not treat the KB as a place to dump summaries.
 
 ## Ingest Loop
 
@@ -47,12 +47,12 @@ Before finishing a wiki update, manually check:
 
 ## Phase 2 CLI Commands
 
-When the CLI is available (`wikiloop`), prefer these over manual directory scanning:
+When the CLI is available (`piekbs`), prefer these over manual directory scanning:
 
-- After ingesting new files: `wikiloop index`
-- Before answering a question: `wikiloop context "<question>"`
-- To search by keyword: `wikiloop search "<query>"`
-- To validate the KB: `wikiloop lint`
-- To check index state: `wikiloop status`
+- After ingesting new files: `piekbs index`
+- Before answering a question: `piekbs context "<question>"`
+- To search by keyword: `piekbs search "<query>"`
+- To validate the KB: `piekbs lint`
+- To check index state: `piekbs status`
 
-Set `WIKILOOP_KB=/path/to/wikiloop-kb` to avoid typing `--kb` on every command.
+Set `WIKILOOP_KB=/path/to/piekbs-kb` to avoid typing `--kb` on every command.

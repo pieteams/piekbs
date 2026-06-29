@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jasen215/wikiloop/internal/llmurl"
+	"github.com/pieteams/piekbs/internal/llmurl"
 )
 
 // Config holds LLM API configuration (shared with distill).

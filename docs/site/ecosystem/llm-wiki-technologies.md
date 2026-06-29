@@ -13,7 +13,7 @@ Raw docs → LLM distills → wiki pages → [query time] → FTS / graph → re
 | Technology | Notes |
 |---|---|
 | LLM as compiler | LLM reads raw docs and writes structured wiki pages — pre-compiled, not retrieved at query time. |
-| Distillation pipeline | Raw doc → LLM extracts key claims, entities, aliases, related links → source-note page (WikiLoop pattern). |
+| Distillation pipeline | Raw doc → LLM extracts key claims, entities, aliases, related links → source-note page (PieKBS pattern). |
 | Tiered compilation | Compile frequently-used docs first (Tier 0–3). Sage Wiki: auto-promote on 3 hits, auto-demote after 90 days inactive. |
 | Incremental update | Only re-process changed documents — avoids full rebuild cost. |
 | [STORM](https://github.com/stanford-oval/storm) (Stanford OVAL) | Multi-perspective Wiki generation agent: simulates different viewpoints → retrieves → generates hierarchical outline → writes cited article. |
@@ -24,7 +24,7 @@ Raw docs → LLM distills → wiki pages → [query time] → FTS / graph → re
 
 | Standard | Notes |
 |---|---|
-| [OKF v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) (Open Knowledge Format) | Google Cloud's engineering spec for the "LLM Wiki" idea. A KB is a directory of Markdown files with YAML frontmatter. Emphasizes structured, portable, tool-agnostic knowledge units. WikiLoop bundles are OKF-conformant. |
+| [OKF v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) (Open Knowledge Format) | Google Cloud's engineering spec for the "LLM Wiki" idea. A KB is a directory of Markdown files with YAML frontmatter. Emphasizes structured, portable, tool-agnostic knowledge units. PieKBS bundles are OKF-conformant. |
 | YAML frontmatter schema | Knowledge unit identity card: `type` (sop / metric / template / case / decision / risk / glossary), `title`, `description`, `source`, `tags`, `updated_at`, `status` (active / outdated / draft). |
 | Knowledge unit + relations | Each unit is a standalone Markdown file; relations expressed as Markdown links — forms a navigable knowledge map for agents. |
 
@@ -44,7 +44,7 @@ Raw docs → LLM distills → wiki pages → [query time] → FTS / graph → re
 
 | Technology | Notes |
 |---|---|
-| SQLite FTS5 + BM25 | Core search engine — no vector model needed. Sub-millisecond full-text search. Used by WikiLoop, Sage Wiki, TreeSearch. |
+| SQLite FTS5 + BM25 | Core search engine — no vector model needed. Sub-millisecond full-text search. Used by PieKBS, Sage Wiki, TreeSearch. |
 | Alias expansion | Key terms indexed with aliases and cross-language equivalents to maximize FTS recall. |
 | Graph traversal | `related_to` links enable multi-hop navigation (similar to wiki page links). BFS expansion on search results. |
 | Hybrid (FTS + vector + graph) | Sage Wiki: FTS5 (411µs) + vector (81ms) + ontology graph (1µs) merged via RRF. |
@@ -55,10 +55,10 @@ Raw docs → LLM distills → wiki pages → [query time] → FTS / graph → re
 | Technology | Notes |
 |---|---|
 | Git version control | All wiki pages in git — full history, diffs, blame. Knowledge changes are auditable. |
-| Lint / health checks | Validate frontmatter, broken source links, missing citations. `wikiloop lint`. |
+| Lint / health checks | Validate frontmatter, broken source links, missing citations. `piekbs lint`. |
 | Conflict detection | `contradicts` links surface disagreements between sources for human review. |
 | Draft staging | Pages with < 2 source references quarantined in `_draft/` — not indexed until verified. |
-| Knowledge gap analysis | `wikiloop synthesize --gaps` identifies topics with insufficient coverage. |
+| Knowledge gap analysis | `piekbs synthesize --gaps` identifies topics with insufficient coverage. |
 | Entity deduplication | Identify different expressions of the same concept and merge into a single node. |
 
 ## 5. Agent Interface (MCP)

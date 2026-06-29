@@ -7,7 +7,7 @@ import (
 	"embed"
 	"net/http"
 
-	"github.com/jasen215/wikiloop/internal/larkimport"
+	"github.com/pieteams/piekbs/internal/larkimport"
 )
 
 //go:embed static/*

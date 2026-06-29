@@ -150,7 +150,7 @@ func isConvertedPath(path, rawDir string) bool {
 	return err == nil && !filepath.IsAbs(rel) && rel != ".." && len(rel) > 0 && rel[:2] != ".."
 }
 
-// isGeneratedWikiPath reports whether path is maintained by WikiLoop itself.
+// isGeneratedWikiPath reports whether path is maintained by PieKBS itself.
 // These writes are already indexed by the active pipeline and must not trigger
 // another watcher cycle.
 func isGeneratedWikiPath(path, wikiDir string) bool {

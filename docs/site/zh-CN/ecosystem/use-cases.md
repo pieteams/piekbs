@@ -69,7 +69,7 @@ RAG 和 LLM Wiki 知识库在各行业的使用方式——存什么内容、谁
 | 代码审查辅助 | Reviewer | AI 检索类似历史 PR/决策，辅助评审 |
 | 故障响应 | SRE/DevOps | 快速检索 runbook、历史事故处置记录 |
 
-**方案选择：** LLM Wiki 为主（架构设计、概念说明、规范文档——WikiLoop 的核心场景）。RAG 负责大量非结构化文档（Confluence、Jira、Slack 归档）。两者结合：WikiLoop 存稳定知识，RAG 动态检索最新 Issue/PR。代表工具：GitHub Copilot Enterprise、Glean、Guru。
+**方案选择：** LLM Wiki 为主（架构设计、概念说明、规范文档——PieKBS 的核心场景）。RAG 负责大量非结构化文档（Confluence、Jira、Slack 归档）。两者结合：PieKBS 存稳定知识，RAG 动态检索最新 Issue/PR。代表工具：GitHub Copilot Enterprise、Glean、Guru。
 
 ---
 
@@ -183,22 +183,22 @@ RAG 和 LLM Wiki 知识库在各行业的使用方式——存什么内容、谁
 
 ---
 
-## WikiLoop 在各行业的切入点
+## PieKBS 在各行业的切入点
 
-WikiLoop 本地优先、MCP 原生、纯 FTS 的特性，在以下行业场景特别契合：
+PieKBS 本地优先、MCP 原生、纯 FTS 的特性，在以下行业场景特别契合：
 
 | 行业 | 契合度 | 具体用法 |
 |---|---|---|
 | **律师事务所** | 高 | 将案例研究笔记、决策记录、客户案件摘要编译成可审计的 Wiki |
 | **会计事务所** | 高 | GAAP 概念结构化知识库、内部业务方法论 Wiki |
 | **制造工厂** | 中 | 工厂 SOP、设备词典、入职知识库——仅适合稳定内容 |
-| **软件开发** | 非常高 | ADR 库、架构知识库、团队 Onboarding Wiki——WikiLoop 的核心场景 |
+| **软件开发** | 非常高 | ADR 库、架构知识库、团队 Onboarding Wiki——PieKBS 的核心场景 |
 | **客服中心** | 中 | 标准话术 Wiki、稳定政策参考——与 RAG 结合处理动态产品数据 |
 | **医疗机构** | 高 | 内部临床 SOP、护理路径 Wiki——私有化部署满足 HIPAA 要求 |
 | **金融机构** | 高 | 内部合规流程 Wiki、产品知识库——气隔离部署满足安全要求 |
 | **教育机构** | 高 | 课程结构 Wiki、机构知识库、研究综合 |
 | **政府机构** | 高 | 政策解读 Wiki、市民 FAQ 知识库——本地部署满足数据主权要求 |
-| **研究团队** | 非常高 | 文献综合、概念图谱、决策记录——WikiLoop 最核心的使用场景 |
+| **研究团队** | 非常高 | 文献综合、概念图谱、决策记录——PieKBS 最核心的使用场景 |
 
 ---
 

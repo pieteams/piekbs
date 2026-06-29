@@ -77,12 +77,12 @@ func runLinux(action Action, kbRoot string) error {
 }
 
 func findBinary() (string, error) {
-	path, err := exec.LookPath("wikiloop")
+	path, err := exec.LookPath("piekbs")
 	if err != nil {
 		// Try the current executable
 		path, err = os.Executable()
 		if err != nil {
-			return "", fmt.Errorf("wikiloop binary not found")
+			return "", fmt.Errorf("piekbs binary not found")
 		}
 	}
 	return filepath.Abs(path)

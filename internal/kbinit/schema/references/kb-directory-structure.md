@@ -1,9 +1,9 @@
-# WikiLoop KB Directory Structure
+# PieKBS KB Directory Structure
 
 Default knowledge base instance name:
 
 ```text
-wikiloop-kb/
+piekbs-kb/
 ```
 
 The name is only a convention. Users may choose any local directory as the KB root.
@@ -11,7 +11,7 @@ The name is only a convention. Users may choose any local directory as the KB ro
 ## Standard Structure
 
 ```text
-wikiloop-kb/
+piekbs-kb/
   raw/
     articles/
     papers/
@@ -66,17 +66,17 @@ wikiloop-kb/
 ## Note on Karpathy's Original Design
 
 In Karpathy's original llm-wiki, **Overview / Entities / How-to / Timelines** are
-*sections inside each article*, not subdirectories. WikiLoop uses
+*sections inside each article*, not subdirectories. PieKBS uses
 `source-notes/concepts/comparisons/decisions/` as the four core subdirectories,
 which is a community evolution better suited to knowledge-base use cases.
 
-Gap analysis reports (`wikiloop synthesize --gaps`) are generated artifacts and
+Gap analysis reports (`piekbs synthesize --gaps`) are generated artifacts and
 belong in `index/gaps/`, not in `wiki/`.
 
 ## Phase 1 Minimum
 
 ```text
-wikiloop-kb/
+piekbs-kb/
   raw/
   wiki/
   schema/

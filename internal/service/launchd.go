@@ -49,8 +49,8 @@ type launchdConfig struct {
 	WatchPath string
 }
 
-// macLabels are the launchd labels managed by WikiLoop.
-var macLabels = []string{"com.wikiloop.mcp", "com.wikiloop.indexer"}
+// macLabels are the launchd labels managed by PieKBS.
+var macLabels = []string{"com.piekbs.mcp", "com.piekbs.indexer"}
 
 func installMacOS(kbRoot string) error {
 	bin, err := findBinary()
@@ -65,7 +65,7 @@ func installMacOS(kbRoot string) error {
 
 	// MCP server
 	mcpCfg := launchdConfig{
-		Label:     "com.wikiloop.mcp",
+		Label:     "com.piekbs.mcp",
 		Args:      []string{bin, "serve"},
 		KBRoot:    kbRoot,
 		Path:      servicePath(),
@@ -75,12 +75,12 @@ func installMacOS(kbRoot string) error {
 	if err := writePlist(agentsDir, mcpCfg); err != nil {
 		return err
 	}
-	loadService(filepath.Join(agentsDir, "com.wikiloop.mcp.plist"))
-	fmt.Println("  Installed and started: com.wikiloop.mcp")
+	loadService(filepath.Join(agentsDir, "com.piekbs.mcp.plist"))
+	fmt.Println("  Installed and started: com.piekbs.mcp")
 
 	// Indexer
 	idxCfg := launchdConfig{
-		Label:     "com.wikiloop.indexer",
+		Label:     "com.piekbs.indexer",
 		Args:      []string{bin, "watch"},
 		KBRoot:    kbRoot,
 		Path:      servicePath(),
@@ -91,11 +91,11 @@ func installMacOS(kbRoot string) error {
 	if err := writePlist(agentsDir, idxCfg); err != nil {
 		return err
 	}
-	loadService(filepath.Join(agentsDir, "com.wikiloop.indexer.plist"))
-	fmt.Println("  Installed and started: com.wikiloop.indexer")
+	loadService(filepath.Join(agentsDir, "com.piekbs.indexer.plist"))
+	fmt.Println("  Installed and started: com.piekbs.indexer")
 
 	fmt.Printf("\nMCP HTTP server: http://127.0.0.1:8766/mcp\n")
-	fmt.Printf("Logs: /tmp/com.wikiloop.mcp.log, /tmp/com.wikiloop.indexer.log\n")
+	fmt.Printf("Logs: /tmp/com.piekbs.mcp.log, /tmp/com.piekbs.indexer.log\n")
 	return nil
 }
 

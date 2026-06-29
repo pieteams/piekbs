@@ -4,7 +4,7 @@
 
 ## 第一步 — 提炼（自动）
 
-将任意 Markdown 文件放入 `raw/`，`wikiloop serve` 的 watcher 自动运行提炼 + 索引。
+将任意 Markdown 文件放入 `raw/`，`piekbs serve` 的 watcher 自动运行提炼 + 索引。
 
 LLM 将结构化 source-note 提取到 `wiki/source-notes/`，包含：
 - `key_claims`：内嵌别名和跨语言等价词（ALIAS RULE）— 确保 FTS 匹配所有查询变体
@@ -15,7 +15,7 @@ LLM 将结构化 source-note 提取到 `wiki/source-notes/`，包含：
 ## 第二步 — 综合（按需）
 
 ```bash
-wikiloop synthesize --topic "RAG"
+piekbs synthesize --topic "RAG"
 ```
 
 当某个主题积累了足够多的 source-note 后，从中生成 concept / comparison / decision 页面。
@@ -24,7 +24,7 @@ wikiloop synthesize --topic "RAG"
 
 ```bash
 # 知识空白分析
-wikiloop synthesize --gaps --topic "RAG"
+piekbs synthesize --gaps --topic "RAG"
 ```
 
 ## 第三步 — 搜索

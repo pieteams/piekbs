@@ -1,16 +1,16 @@
 ---
-name: wikiloop
-description: Use this skill when maintaining, querying, initializing, or reviewing a local-first WikiLoop knowledge base. This skill should trigger for tasks involving raw/, wiki/, schema/, source notes, cited wiki pages, KB ingestion, KB maintenance loops, or a wikiloop-kb directory, even if the user does not explicitly say "WikiLoop".
+name: piekbs
+description: Use this skill when maintaining, querying, initializing, or reviewing a local-first PieKBS knowledge base. This skill should trigger for tasks involving raw/, wiki/, schema/, source notes, cited wiki pages, KB ingestion, KB maintenance loops, or a piekbs-kb directory, even if the user does not explicitly say "PieKBS".
 ---
 
-# WikiLoop
+# PieKBS
 
 Use this skill to maintain a local-first LLM Wiki knowledge base. Keep raw sources authoritative, wiki pages structured and cited, and every knowledge update tied to a repeatable loop.
 
 ## Core Model
 
 ```text
-wikiloop-kb/
+piekbs-kb/
   raw/      source of truth; do not modify raw sources
   wiki/     LLM-maintained Markdown knowledge layer
   schema/   KB-local rules and workflows

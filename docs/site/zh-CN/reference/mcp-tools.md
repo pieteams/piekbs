@@ -1,6 +1,6 @@
 # MCP 工具参考
 
-WikiLoop 为 Agent 暴露三个 MCP 工具。
+PieKBS 为 Agent 暴露三个 MCP 工具。
 
 ## kb_search
 

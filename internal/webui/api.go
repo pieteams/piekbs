@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jasen215/wikiloop/internal/config"
-	"github.com/jasen215/wikiloop/internal/kb"
+	"github.com/pieteams/piekbs/internal/config"
+	"github.com/pieteams/piekbs/internal/kb"
 )
 
 // kbErrToHTTP writes the appropriate HTTP status code and JSON error body.

@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-WikiLoop exposes three MCP tools for agents.
+PieKBS exposes three MCP tools for agents.
 
 ## kb_search
 

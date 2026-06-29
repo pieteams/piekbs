@@ -1,6 +1,6 @@
-# How Agents Use WikiLoop
+# How Agents Use PieKBS
 
-Agents interact with WikiLoop through two MCP tools:
+Agents interact with PieKBS through two MCP tools:
 
 ## kb_search
 
@@ -35,7 +35,7 @@ Agents are expected to:
 - Cross-verify across sources
 - Form their own conclusions
 
-WikiLoop provides **materials** — it does not generate answers.
+PieKBS provides **materials** — it does not generate answers.
 
 ## Query Expansion
 

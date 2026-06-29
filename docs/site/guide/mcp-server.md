@@ -1,16 +1,16 @@
 # MCP Server
 
-WikiLoop exposes KB tools via the MCP protocol. Two transport modes are supported.
+PieKBS exposes KB tools via the MCP protocol. Two transport modes are supported.
 
 ## HTTP Mode (Recommended)
 
-One WikiLoop process shared by all agents — Claude Code, Cursor, VS Code (Copilot), Windsurf, and others.
+One PieKBS process shared by all agents — Claude Code, Cursor, VS Code (Copilot), Windsurf, and others.
 
-**Start WikiLoop:**
+**Start PieKBS:**
 
 ```bash
-export WIKILOOP_KB=/path/to/wikiloop-kb
-wikiloop serve
+export WIKILOOP_KB=/path/to/piekbs-kb
+piekbs serve
 ```
 
 **Configure each agent:**
@@ -18,7 +18,7 @@ wikiloop serve
 ```json
 {
   "mcpServers": {
-    "wikiloop": {
+    "piekbs": {
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
@@ -33,14 +33,14 @@ wikiloop serve
 
 ## stdio Mode
 
-For hosted environments (Hermes, OpenClaw, etc.) where WikiLoop runs as a subprocess.
+For hosted environments (Hermes, OpenClaw, etc.) where PieKBS runs as a subprocess.
 
 ```json
 {
   "mcpServers": {
-    "wikiloop": {
+    "piekbs": {
       "type": "stdio",
-      "command": "/path/to/wikiloop",
+      "command": "/path/to/piekbs",
       "args": ["stdio"],
       "env": {
         "WIKILOOP_KB": "/path/to/your-kb"

@@ -122,7 +122,7 @@ This synonym index ensures every query variant can find this document via FTS.
 
 ENTITY RULE (MANDATORY): Mark named entities inline using 【entity|type】 format. Types: 人物|组织|产品|技术|概念|项目|地点
   GOOD: "【Karpathy|人物】提出的【LLM Wiki|概念】采用三层架构，由【Anthropic|组织】等团队验证"
-  GOOD: "【bge-small-zh|产品】（【BAAI|组织】出品）在【WikiLoop|项目】中用于向量嵌入，维度512"
+  GOOD: "【bge-small-zh|产品】（【BAAI|组织】出品）在【PieKBS|项目】中用于向量嵌入，维度512"
 This enables cross-document entity linking and multi-hop retrieval.
 
 GROUNDING RULES:

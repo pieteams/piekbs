@@ -1,6 +1,6 @@
 # Schema & Templates
 
-`wikiloop init` populates the KB's `schema/` directory with bundled authoring rules and page templates.
+`piekbs init` populates the KB's `schema/` directory with bundled authoring rules and page templates.
 
 ## Directory Structure
 

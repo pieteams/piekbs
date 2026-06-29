@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jasen215/wikiloop/internal/distill"
+	"github.com/pieteams/piekbs/internal/distill"
 )
 
 func TestStripCodeFences(t *testing.T) {

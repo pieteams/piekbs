@@ -5,11 +5,11 @@
 ```bash
 export WIKILOOP_KB=/path/to/your-kb
 
-wikiloop init    # scaffold KB dirs and copy schema/templates
-wikiloop serve   # start server: MCP + Web UI + file watcher
+piekbs init    # scaffold KB dirs and copy schema/templates
+piekbs serve   # start server: MCP + Web UI + file watcher
 ```
 
-> On macOS, double-click WikiLoop.app to launch as a menubar icon.
+> On macOS, double-click PieKBS.app to launch as a menubar icon.
 
 ## 2. Configure MCP in Your Agent
 
@@ -20,7 +20,7 @@ Add to `~/.claude.json` under `mcpServers`:
 ```json
 {
   "mcpServers": {
-    "wikiloop": {
+    "piekbs": {
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
@@ -38,9 +38,9 @@ Add to `~/.claude.json` under `mcpServers`:
 ```json
 {
   "mcpServers": {
-    "wikiloop": {
+    "piekbs": {
       "type": "stdio",
-      "command": "/path/to/wikiloop",
+      "command": "/path/to/piekbs",
       "args": ["stdio"],
       "env": {
         "WIKILOOP_KB": "/path/to/your-kb"
@@ -62,7 +62,7 @@ cp my-notes.md $WIKILOOP_KB/raw/
 ## 4. Search
 
 ```bash
-wikiloop search "your query"
+piekbs search "your query"
 ```
 
 Or let your agent use the MCP tools:

@@ -5,11 +5,11 @@
 ```bash
 export WIKILOOP_KB=/path/to/your-kb
 
-wikiloop init    # 初始化目录结构，复制 schema/templates
-wikiloop serve   # 启动服务：MCP + Web UI + 文件监听
+piekbs init    # 初始化目录结构，复制 schema/templates
+piekbs serve   # 启动服务：MCP + Web UI + 文件监听
 ```
 
-> macOS 用户可直接双击 WikiLoop.app 以菜单栏图标启动。
+> macOS 用户可直接双击 PieKBS.app 以菜单栏图标启动。
 
 ## 2. 在 Agent 中配置 MCP
 
@@ -20,7 +20,7 @@ wikiloop serve   # 启动服务：MCP + Web UI + 文件监听
 ```json
 {
   "mcpServers": {
-    "wikiloop": {
+    "piekbs": {
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
@@ -38,9 +38,9 @@ wikiloop serve   # 启动服务：MCP + Web UI + 文件监听
 ```json
 {
   "mcpServers": {
-    "wikiloop": {
+    "piekbs": {
       "type": "stdio",
-      "command": "/path/to/wikiloop",
+      "command": "/path/to/piekbs",
       "args": ["stdio"],
       "env": {
         "WIKILOOP_KB": "/path/to/your-kb"
@@ -62,7 +62,7 @@ cp my-notes.md $WIKILOOP_KB/raw/
 ## 4. 搜索
 
 ```bash
-wikiloop search "你的查询"
+piekbs search "你的查询"
 ```
 
 或让 Agent 使用 MCP 工具：

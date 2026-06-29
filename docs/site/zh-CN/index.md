@@ -2,19 +2,19 @@
 layout: home
 
 hero:
-  name: "WikiLoop"
+  name: "PieKBS"
   text: "面向 Agent 的知识搜索引擎"
   tagline: 将原始文档提炼为结构化 Markdown 知识库，通过 MCP 供 Agent 搜索和阅读。
   actions:
     - theme: brand
       text: 快速开始
-      link: /zh-CN/getting-started/what-is-wikiloop
+      link: /zh-CN/getting-started/what-is-piekbs
     - theme: alt
       text: 入门指南
       link: /zh-CN/getting-started/quick-start
     - theme: alt
       text: GitHub
-      link: https://github.com/jasen215/wikiloop
+      link: https://github.com/pieteams/piekbs
 
 features:
   - title: Agent 原生搜索

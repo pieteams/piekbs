@@ -1,16 +1,16 @@
 # MCP 服务器
 
-WikiLoop 通过 MCP 协议暴露知识库工具，支持两种传输模式。
+PieKBS 通过 MCP 协议暴露知识库工具，支持两种传输模式。
 
 ## HTTP 模式（推荐）
 
 单进程共享给所有 Agent — Claude Code、Cursor、VS Code (Copilot)、Windsurf 等。
 
-**启动 WikiLoop：**
+**启动 PieKBS：**
 
 ```bash
-export WIKILOOP_KB=/path/to/wikiloop-kb
-wikiloop serve
+export WIKILOOP_KB=/path/to/piekbs-kb
+piekbs serve
 ```
 
 **配置各 Agent：**
@@ -18,7 +18,7 @@ wikiloop serve
 ```json
 {
   "mcpServers": {
-    "wikiloop": {
+    "piekbs": {
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
@@ -33,14 +33,14 @@ wikiloop serve
 
 ## stdio 模式
 
-适用于托管环境（Hermes、OpenClaw 等），WikiLoop 作为 Agent 主机的子进程运行。
+适用于托管环境（Hermes、OpenClaw 等），PieKBS 作为 Agent 主机的子进程运行。
 
 ```json
 {
   "mcpServers": {
-    "wikiloop": {
+    "piekbs": {
       "type": "stdio",
-      "command": "/path/to/wikiloop",
+      "command": "/path/to/piekbs",
       "args": ["stdio"],
       "env": {
         "WIKILOOP_KB": "/path/to/your-kb"

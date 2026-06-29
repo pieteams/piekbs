@@ -1,4 +1,4 @@
-module github.com/jasen215/wikiloop
+module github.com/pieteams/piekbs
 
 go 1.25.5
 

@@ -17,9 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jasen215/wikiloop/internal/kb"
-	"github.com/jasen215/wikiloop/internal/llmurl"
-	"github.com/jasen215/wikiloop/internal/synthesize"
+	"github.com/pieteams/piekbs/internal/kb"
+	"github.com/pieteams/piekbs/internal/llmurl"
+	"github.com/pieteams/piekbs/internal/synthesize"
 )
 
 // Config holds the LLM API configuration.

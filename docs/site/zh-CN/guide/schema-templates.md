@@ -1,6 +1,6 @@
 # Schema 与模板
 
-`wikiloop init` 会将内置写作规则和页面模板复制到 KB 的 `schema/` 目录。
+`piekbs init` 会将内置写作规则和页面模板复制到 KB 的 `schema/` 目录。
 
 ## 目录结构
 

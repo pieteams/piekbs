@@ -59,5 +59,5 @@ Systems focused on giving AI agents persistent, cross-session memory — distinc
 | [GBrain](https://github.com/garrytan/gbrain) | Garry Tan (YC CEO) | — | Knowledge operating system. Handles multi-source, multimedia input (audio transcription, etc.) and continuously updates a structured knowledge graph. Built for Agent long-term memory. |
 | [Sage Wiki](https://github.com/joneyao/sage-wiki) | Community | — | Go single-binary LLM Wiki implementation. Tiered compilation (supports 100k+ docs), hybrid search (FTS + vector + ontology graph), 17 MCP tools. Cuts token usage by up to 95% vs naive RAG. |
 | [Walnut](https://github.com/wimham/walnut) | Community | — | Local-first AI knowledge management Agent. BYOK mode (OpenAI/Claude/any provider). Auto-organizes docs and proactively recommends related notes during writing. |
-| [WikiLoop](https://github.com/jasen215/wikiloop) | — | — | Local-first knowledge search engine for agents. Distills raw docs into structured Markdown wiki; search and read via MCP. |
+| [PieKBS](https://github.com/pieteams/piekbs) | — | — | Local-first knowledge search engine for agents. Distills raw docs into structured Markdown wiki; search and read via MCP. |
 | [Mintlify](https://mintlify.com) | Mintlify | — | Auto-generates developer docs/wiki from code. AI-driven documentation platform. |

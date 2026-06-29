@@ -50,7 +50,7 @@ func Run(kbRoot string, port int, lang string, actionCh chan<- Action) {
 	labels := labelsFor(lang)
 	systray.Run(func() {
 		systray.SetTemplateIcon(iconPNG, iconPNG)
-		systray.SetTooltip("WikiLoop Knowledge Base")
+		systray.SetTooltip("PieKBS Knowledge Base")
 
 		mOpenUI := systray.AddMenuItem(labels.OpenDashboard, "")
 		mOpenKB := systray.AddMenuItem(labels.OpenKBDir, "")

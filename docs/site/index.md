@@ -2,19 +2,19 @@
 layout: home
 
 hero:
-  name: "WikiLoop"
+  name: "PieKBS"
   text: "Knowledge Search Engine for Agents"
   tagline: Distill raw docs into structured Markdown wiki. Search and read via MCP.
   actions:
     - theme: brand
       text: Get Started
-      link: /getting-started/what-is-wikiloop
+      link: /getting-started/what-is-piekbs
     - theme: alt
       text: Quick Start
       link: /getting-started/quick-start
     - theme: alt
       text: GitHub
-      link: https://github.com/jasen215/wikiloop
+      link: https://github.com/pieteams/piekbs
 
 features:
   - title: Agent-Native Search

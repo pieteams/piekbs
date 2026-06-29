@@ -36,9 +36,9 @@ jobs:
         with:
           name: dist-macos
           path: |
-            dist/WikiLoop-${{ steps.version.outputs.VERSION }}-macos-arm64.dmg
-            dist/wikiloop-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz
-            dist/wikiloop-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz
+            dist/PieKBS-${{ steps.version.outputs.VERSION }}-macos-arm64.dmg
+            dist/piekbs-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz
+            dist/piekbs-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz
 
   build-windows:
     runs-on: ubuntu-latest
@@ -60,14 +60,14 @@ jobs:
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
             go build -tags fts5 \
             -ldflags "-s -w -X main.Version=${{ steps.version.outputs.VERSION }}" \
-            -o dist/wikiloop.exe ./cmd/wikiloop/
-          cd dist && zip -q wikiloop-${{ steps.version.outputs.VERSION }}-windows-amd64.zip wikiloop.exe && rm wikiloop.exe
+            -o dist/piekbs.exe ./cmd/piekbs/
+          cd dist && zip -q piekbs-${{ steps.version.outputs.VERSION }}-windows-amd64.zip piekbs.exe && rm piekbs.exe
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist-windows
-          path: dist/wikiloop-${{ steps.version.outputs.VERSION }}-windows-amd64.zip
+          path: dist/piekbs-${{ steps.version.outputs.VERSION }}-windows-amd64.zip
 
   release:
     needs: [build-macos, build-windows]
@@ -92,12 +92,12 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: WikiLoop v${{ steps.version.outputs.VERSION }}
+          name: PieKBS v${{ steps.version.outputs.VERSION }}
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           files: |
-            dist/WikiLoop-${{ steps.version.outputs.VERSION }}-macos-arm64.dmg
-            dist/wikiloop-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz
-            dist/wikiloop-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz
-            dist/wikiloop-${{ steps.version.outputs.VERSION }}-windows-amd64.zip
+            dist/PieKBS-${{ steps.version.outputs.VERSION }}-macos-arm64.dmg
+            dist/piekbs-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz
+            dist/piekbs-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz
+            dist/piekbs-${{ steps.version.outputs.VERSION }}-windows-amd64.zip

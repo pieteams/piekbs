@@ -36,7 +36,7 @@ supports: []    # PATHS ONLY: same rule as related_to.
 - Type:
 - Author: Not provided in source.
 - Published: Not provided in source.
-- Imported:          # set by WikiLoop from the raw file modification date
+- Imported:          # set by PieKBS from the raw file modification date
 
 ## Summary
 
@@ -67,7 +67,7 @@ supports: []    # PATHS ONLY: same rule as related_to.
   ENTITY RULE (MANDATORY for knowledge graph):
   Mark named entities inline using 【entity|type】 format. Types: 人物|组织|产品|技术|概念|项目|地点
   - GOOD: "【Karpathy|人物】提出的【LLM Wiki|概念】采用三层架构，由【Anthropic|组织】等团队验证"
-  - GOOD: "【bge-small-zh|产品】（【BAAI|组织】出品）在【WikiLoop|项目】中用于向量嵌入，维度512"
+  - GOOD: "【bge-small-zh|产品】（【BAAI|组织】出品）在【PieKBS|项目】中用于向量嵌入，维度512"
   - BAD:  直接写名称不标注类型
   This enables cross-document entity linking and multi-hop retrieval.
 

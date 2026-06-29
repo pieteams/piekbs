@@ -1,6 +1,6 @@
 # Config Reference
 
-WikiLoop is configured via `config.yaml` in the KB root directory.
+PieKBS is configured via `config.yaml` in the KB root directory.
 
 ## Example
 
@@ -28,7 +28,7 @@ watcher:
 
 ## distill
 
-Required for `wikiloop distill` and `wikiloop synthesize`.
+Required for `piekbs distill` and `piekbs synthesize`.
 
 | Key | Default | Description |
 |---|---|---|

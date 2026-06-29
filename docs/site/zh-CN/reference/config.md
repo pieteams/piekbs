@@ -1,6 +1,6 @@
 # 配置参考
 
-WikiLoop 通过 KB 根目录下的 `config.yaml` 配置。
+PieKBS 通过 KB 根目录下的 `config.yaml` 配置。
 
 ## 示例
 
@@ -28,7 +28,7 @@ watcher:
 
 ## distill
 
-`wikiloop distill` 和 `wikiloop synthesize` 需要此配置。
+`piekbs distill` 和 `piekbs synthesize` 需要此配置。
 
 | 键 | 默认值 | 描述 |
 |---|---|---|

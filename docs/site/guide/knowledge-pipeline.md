@@ -4,7 +4,7 @@ Raw documents flow through a distillation pipeline before agents can search them
 
 ## Step 1 — Distill (automatic)
 
-Drop any Markdown file into `raw/`. The `wikiloop serve` watcher automatically runs distill + index.
+Drop any Markdown file into `raw/`. The `piekbs serve` watcher automatically runs distill + index.
 
 The LLM extracts structured source-notes into `wiki/source-notes/`, including:
 - `key_claims` with inlined aliases and cross-language equivalents (ALIAS RULE) — ensures FTS matches all query variants
@@ -15,7 +15,7 @@ The LLM extracts structured source-notes into `wiki/source-notes/`, including:
 ## Step 2 — Synthesize (on-demand)
 
 ```bash
-wikiloop synthesize --topic "RAG"
+piekbs synthesize --topic "RAG"
 ```
 
 Generates concept / comparison / decision pages from source-notes when enough sources on a topic accumulate.
@@ -24,7 +24,7 @@ Pages with fewer than 2 source references go to `wiki/<type>/_draft/` and are no
 
 ```bash
 # Knowledge-gap analysis
-wikiloop synthesize --gaps --topic "RAG"
+piekbs synthesize --gaps --topic "RAG"
 ```
 
 ## Step 3 — Search

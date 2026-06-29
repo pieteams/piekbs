@@ -24,8 +24,8 @@ func installLinux(kbRoot string) error {
 		description string
 		execStart   string
 	}{
-		{"wikiloop-mcp", "WikiLoop MCP HTTP server", bin + " serve"},
-		{"wikiloop-indexer", "WikiLoop KB file watcher", bin + " watch"},
+		{"piekbs-mcp", "PieKBS MCP HTTP server", bin + " serve"},
+		{"piekbs-indexer", "PieKBS KB file watcher", bin + " watch"},
 	}
 
 	for _, u := range units {
@@ -62,8 +62,8 @@ WantedBy=default.target
 	return nil
 }
 
-// linuxUnits are the systemd user units managed by WikiLoop.
-var linuxUnits = []string{"wikiloop-mcp", "wikiloop-indexer"}
+// linuxUnits are the systemd user units managed by PieKBS.
+var linuxUnits = []string{"piekbs-mcp", "piekbs-indexer"}
 
 func uninstallLinux() error {
 	unitDir := filepath.Join(os.Getenv("HOME"), ".config", "systemd", "user")

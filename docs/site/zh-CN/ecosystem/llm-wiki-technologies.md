@@ -13,7 +13,7 @@ LLM Wiki（知识编译范式）背后的核心技术——知识在写入时预
 | 技术 | 说明 |
 |---|---|
 | LLM 作为编译器 | LLM 读取原始文档，写入结构化 Wiki 页面——查询时直接读取编译产物。 |
-| 提炼管道 | 原始文档 → LLM 提取关键主张、实体、别名、关联链接 → source-note 页面（WikiLoop 模式）。 |
+| 提炼管道 | 原始文档 → LLM 提取关键主张、实体、别名、关联链接 → source-note 页面（PieKBS 模式）。 |
 | 分层编译 | 优先编译高频文档（Tier 0–3）。Sage Wiki：命中 3 次自动升级，90 天不活跃自动降级。 |
 | 增量更新 | 仅处理变更文档，避免全量重建成本。 |
 | [STORM](https://github.com/stanford-oval/storm)（Stanford OVAL） | 多视角 Wiki 生成 Agent：模拟不同视角提问 → 检索 → 生成层级大纲 → 撰写带引用的完整词条。 |
@@ -24,7 +24,7 @@ LLM Wiki（知识编译范式）背后的核心技术——知识在写入时预
 
 | 标准 | 说明 |
 |---|---|
-| [OKF v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)（Open Knowledge Format，开放知识格式） | Google Cloud 对 "LLM Wiki" 想法的工程化规格。知识库是包含 YAML frontmatter 的 Markdown 文件目录，强调知识的结构化、可携带性和工具无关性。WikiLoop 知识库与 OKF v0.1 兼容。 |
+| [OKF v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf)（Open Knowledge Format，开放知识格式） | Google Cloud 对 "LLM Wiki" 想法的工程化规格。知识库是包含 YAML frontmatter 的 Markdown 文件目录，强调知识的结构化、可携带性和工具无关性。PieKBS 知识库与 OKF v0.1 兼容。 |
 | YAML frontmatter Schema | 知识单元的"身份证"：`type`（sop / metric / template / case / decision / risk / glossary）、`title`、`description`、`source`、`tags`、`updated_at`、`status`（active / outdated / draft）。 |
 | 知识单元 + 关联 | 每个知识单元是独立的 Markdown 文件；关联关系用 Markdown 链接表达而非文件夹层级——形成供 Agent 导航的知识地图。 |
 
@@ -44,7 +44,7 @@ LLM Wiki（知识编译范式）背后的核心技术——知识在写入时预
 
 | 技术 | 说明 |
 |---|---|
-| SQLite FTS5 + BM25 | 核心搜索引擎——无需向量模型，亚毫秒级全文检索。WikiLoop、Sage Wiki、TreeSearch 均采用。 |
+| SQLite FTS5 + BM25 | 核心搜索引擎——无需向量模型，亚毫秒级全文检索。PieKBS、Sage Wiki、TreeSearch 均采用。 |
 | 别名扩展 | 关键术语索引时内嵌别名和跨语言等价词，最大化 FTS 召回率。 |
 | 图遍历 | `related_to` 链接实现多跳导航（类似 Wiki 页面链接）。搜索结果进行 BFS 扩展。 |
 | 混合检索（FTS + 向量 + 图） | Sage Wiki：FTS5（411µs）+ 向量（81ms）+ 本体图谱（1µs），通过 RRF 融合。 |
@@ -55,10 +55,10 @@ LLM Wiki（知识编译范式）背后的核心技术——知识在写入时预
 | 技术 | 说明 |
 |---|---|
 | Git 版本控制 | 所有 Wiki 页面在 Git 中——完整历史、diff、blame，知识变更完全可审计。 |
-| Lint / 健康检查 | 验证 frontmatter、断开的 source 链接、缺失引用。`wikiloop lint`。 |
+| Lint / 健康检查 | 验证 frontmatter、断开的 source 链接、缺失引用。`piekbs lint`。 |
 | 冲突检测 | `contradicts` 链接将来源间的分歧暴露出来，供人工审核。 |
 | Draft 暂存 | 来源少于 2 个的页面隔离到 `_draft/`——验证补充后才进入索引。 |
-| 知识空白分析 | `wikiloop synthesize --gaps` 识别覆盖不足的主题。 |
+| 知识空白分析 | `piekbs synthesize --gaps` 识别覆盖不足的主题。 |
 | 实体去重 / 解析 | 识别同一概念的不同表述并合并为单一节点。 |
 
 ## 5. Agent 接口（MCP）

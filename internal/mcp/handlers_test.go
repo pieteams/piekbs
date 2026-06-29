@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jasen215/wikiloop/internal/kb"
+	"github.com/pieteams/piekbs/internal/kb"
 )
 
 // makeTempKB creates a temporary KB root with wiki/ and raw/ subdirectories.

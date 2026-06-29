@@ -1,6 +1,6 @@
 # Citation Rules
 
-WikiLoop treats `raw/` as the source of truth and `wiki/` as a derived knowledge layer.
+PieKBS treats `raw/` as the source of truth and `wiki/` as a derived knowledge layer.
 
 ## Required Source Links
 

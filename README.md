@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="docs/readme/logo.png" width="128" alt="WikiLoop"><br>
-  <h1>WikiLoop</h1>
+  <img src="docs/readme/logo.png" width="128" alt="PieKBS"><br>
+  <h1>PieKBS</h1>
   <p>A knowledge search engine for agents — distill raw docs into structured Markdown wiki, search and read via MCP</p>
   <p>
     <strong>English</strong> |
@@ -14,24 +14,24 @@
   </p>
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
-    <a href="https://github.com/jasen215/wikiloop/releases"><img src="https://img.shields.io/github/v/release/jasen215/wikiloop" alt="Release"></a>
+    <a href="https://github.com/pieteams/piekbs/releases"><img src="https://img.shields.io/github/v/release/jasen215/piekbs" alt="Release"></a>
     <img src="https://img.shields.io/badge/go-1.25+-00ADD8.svg" alt="Go Version">
     <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blue" alt="Platform">
   </p>
 </div>
 
-WikiLoop is a local-first knowledge search engine for agents. It distills raw documents into a structured, reviewable Markdown wiki, then exposes two MCP tools — `kb_search` and `kb_page` — that let agents search and deep-read at their own pace.
+PieKBS is a local-first knowledge search engine for agents. It distills raw documents into a structured, reviewable Markdown wiki, then exposes two MCP tools — `kb_search` and `kb_page` — that let agents search and deep-read at their own pace.
 
-![WikiLoop Screenshot](docs/readme/image-001.png)
+![PieKBS Screenshot](docs/readme/image-001.png)
 
 ## Design Philosophy
 
-WikiLoop is built around one observation: **agents use external knowledge tools the same way humans use search engines** — they issue multiple queries from different angles, follow links, and synthesize their own conclusions. They do not want a pre-packaged answer; they want the raw materials to form their own.
+PieKBS is built around one observation: **agents use external knowledge tools the same way humans use search engines** — they issue multiple queries from different angles, follow links, and synthesize their own conclusions. They do not want a pre-packaged answer; they want the raw materials to form their own.
 
-This means WikiLoop's job is not to answer questions. It is to make sure that when an agent searches for something, it finds the right documents — and can read them in full.
+This means PieKBS's job is not to answer questions. It is to make sure that when an agent searches for something, it finds the right documents — and can read them in full.
 
 ```text
-wikiloop-kb/
+piekbs-kb/
   raw/                  Source of truth — original materials in any format.
                         Drop files here; the watcher auto-distills them.
 
@@ -49,9 +49,9 @@ wikiloop-kb/
                         Managed automatically — do not edit manually.
 ```
 
-## How Agents Use WikiLoop
+## How Agents Use PieKBS
 
-Agents interact with WikiLoop through three MCP tools:
+Agents interact with PieKBS through three MCP tools:
 
 **`kb_search(query, limit?)`** — Search with a keyword or phrase. Returns up to 5 source-notes and 3 concept/comparison/decision pages per call. Each result includes a `related` field listing linked documents for navigation. Use multiple searches with different keywords to cover a topic from multiple angles.
 
@@ -68,18 +68,18 @@ kb_page(["id1", "id2", "id3"]) → deep-read the most relevant ones
 Agent synthesizes its own answer from what it found
 ```
 
-Agents are expected to search iteratively, follow `related` links, cross-verify across sources, and form their own conclusions. WikiLoop does not generate answers.
+Agents are expected to search iteratively, follow `related` links, cross-verify across sources, and form their own conclusions. PieKBS does not generate answers.
 
-## WikiLoop vs RAG
+## PieKBS vs RAG
 
-Traditional RAG retrieves context and hands it to the LLM to answer. WikiLoop hands the agent raw materials and lets the agent do the reasoning.
+Traditional RAG retrieves context and hands it to the LLM to answer. PieKBS hands the agent raw materials and lets the agent do the reasoning.
 
 ```text
 RAG:       user question → retrieve context → LLM answers
-WikiLoop:  agent searches → agent reads → agent synthesizes
+PieKBS:  agent searches → agent reads → agent synthesizes
 ```
 
-| | RAG | WikiLoop |
+| | RAG | PieKBS |
 |---|---|---|
 | Knowledge form | Implicit (vectors or chunks) | Explicit (Markdown, auditable) |
 | Agent role | Passive receiver of context | Active searcher and reader |
@@ -88,7 +88,7 @@ WikiLoop:  agent searches → agent reads → agent synthesizes
 | Multi-hop reasoning | LLM-dependent | Graph expansion via `related` links |
 | Embedding | Required | Not required (pure FTS) |
 
-WikiLoop bundles are conformant with [OKF v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf).
+PieKBS bundles are conformant with [OKF v0.1](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf).
 
 ## Knowledge Pipeline
 
@@ -96,7 +96,7 @@ Raw documents flow through a distillation pipeline before agents can search them
 
 **Step 1 — Distill (automatic)**
 
-Drop any Markdown file into `raw/`. The `wikiloop serve` watcher automatically runs distill + index. The LLM extracts structured source-notes into `wiki/source-notes/`, including:
+Drop any Markdown file into `raw/`. The `piekbs serve` watcher automatically runs distill + index. The LLM extracts structured source-notes into `wiki/source-notes/`, including:
 - `key_claims` with inlined aliases and cross-language equivalents (ALIAS RULE) — ensures FTS matches all query variants
 - Named entity annotations in `【entity|type】` format
 - `related_to`, `supports`, `contradicts` links — powers the `related` field in search results
@@ -105,7 +105,7 @@ Drop any Markdown file into `raw/`. The `wikiloop serve` watcher automatically r
 **Step 2 — Synthesize (on-demand)**
 
 ```bash
-wikiloop synthesize --topic "RAG"
+piekbs synthesize --topic "RAG"
 ```
 
 Generates concept / comparison / decision pages from source-notes when enough sources on a topic accumulate. Pages with fewer than 2 source references go to `wiki/<type>/_draft/` and are not indexed until more sources are added.
@@ -120,29 +120,29 @@ Download the latest release:
 
 | Platform | File |
 |---|---|
-| macOS Apple Silicon (ARM64) | `WikiLoop-<version>-macos-arm64.dmg` |
-| Linux x86_64 | `wikiloop-<version>-linux-amd64.tar.gz` |
-| Linux ARM64 | `wikiloop-<version>-linux-arm64.tar.gz` |
-| Windows x86_64 | `wikiloop-<version>-windows-amd64.zip` |
+| macOS Apple Silicon (ARM64) | `PieKBS-<version>-macos-arm64.dmg` |
+| Linux x86_64 | `piekbs-<version>-linux-amd64.tar.gz` |
+| Linux ARM64 | `piekbs-<version>-linux-arm64.tar.gz` |
+| Windows x86_64 | `piekbs-<version>-windows-amd64.zip` |
 
-> **macOS Intel (x86_64):** No pre-built release. GitHub Actions dropped the Intel macOS runner in April 2025. Build from source on your Intel Mac: `CGO_ENABLED=1 go build -tags fts5 -o wikiloop ./cmd/wikiloop/`
+> **macOS Intel (x86_64):** No pre-built release. GitHub Actions dropped the Intel macOS runner in April 2025. Build from source on your Intel Mac: `CGO_ENABLED=1 go build -tags fts5 -o piekbs ./cmd/piekbs/`
 
-**macOS:** Open the DMG and drag WikiLoop to Applications. The app runs as a menubar icon.
+**macOS:** Open the DMG and drag PieKBS to Applications. The app runs as a menubar icon.
 
 **Linux:**
 ```bash
-tar -xzf wikiloop-<version>-linux-amd64.tar.gz -C /path/to/install/
-sudo ln -sf /path/to/install/wikiloop /usr/local/bin/wikiloop
+tar -xzf piekbs-<version>-linux-amd64.tar.gz -C /path/to/install/
+sudo ln -sf /path/to/install/piekbs /usr/local/bin/piekbs
 ```
 
-**Windows:** Extract the zip and run `wikiloop.exe serve` (or `wikiloop.exe stdio` for MCP). Add the directory to `PATH` for convenience. No CGO required — pure Go binary.
+**Windows:** Extract the zip and run `piekbs.exe serve` (or `piekbs.exe stdio` for MCP). Add the directory to `PATH` for convenience. No CGO required — pure Go binary.
 
-**HarmonyOS PC (community, experimental):** WikiLoop is not officially released for HarmonyOS PC. However, since the core binary requires no CGO (pure Go + SQLite), it can be built natively on HarmonyOS using the community [Harmonybrew](https://harmonybrew.dev) package manager. See [ohos_go_cgo](https://github.com/ohos-go/ohos_go_cgo) for a guide on setting up Go + CGO on HarmonyOS PC.
+**HarmonyOS PC (community, experimental):** PieKBS is not officially released for HarmonyOS PC. However, since the core binary requires no CGO (pure Go + SQLite), it can be built natively on HarmonyOS using the community [Harmonybrew](https://harmonybrew.dev) package manager. See [ohos_go_cgo](https://github.com/ohos-go/ohos_go_cgo) for a guide on setting up Go + CGO on HarmonyOS PC.
 
 ```bash
 # On HarmonyOS PC (after installing Go via Harmonybrew)
-CGO_ENABLED=0 go build -tags fts5 -o wikiloop ./cmd/wikiloop/
-wikiloop serve
+CGO_ENABLED=0 go build -tags fts5 -o piekbs ./cmd/piekbs/
+piekbs serve
 ```
 
 ## Building from Source
@@ -151,10 +151,10 @@ Requires Go 1.25+. No CGO required.
 
 ```bash
 # macOS / Linux
-go build -tags fts5 -o wikiloop ./cmd/wikiloop/
+go build -tags fts5 -o piekbs ./cmd/piekbs/
 
 # Windows
-go build -tags fts5 -o wikiloop.exe ./cmd/wikiloop/
+go build -tags fts5 -o piekbs.exe ./cmd/piekbs/
 ```
 
 Or use the multi-platform build script:
@@ -165,16 +165,16 @@ Or use the multi-platform build script:
 
 | Target | Output | Platform |
 |---|---|---|
-| `darwin-arm64` | `dist/WikiLoop-<version>-macos-arm64.dmg` | macOS Apple Silicon |
-| `linux-amd64` | `dist/wikiloop-<version>-linux-amd64.tar.gz` | Linux x86_64 |
-| `linux-arm64` | `dist/wikiloop-<version>-linux-arm64.tar.gz` | Linux ARM64 |
-| `windows-amd64` | `dist/wikiloop-<version>-windows-amd64.zip` | Windows x86_64 |
+| `darwin-arm64` | `dist/PieKBS-<version>-macos-arm64.dmg` | macOS Apple Silicon |
+| `linux-amd64` | `dist/piekbs-<version>-linux-amd64.tar.gz` | Linux x86_64 |
+| `linux-arm64` | `dist/piekbs-<version>-linux-arm64.tar.gz` | Linux ARM64 |
+| `windows-amd64` | `dist/piekbs-<version>-windows-amd64.zip` | Windows x86_64 |
 
 ## Repository Structure
 
 ```text
-wikiloop/
-  cmd/wikiloop/        # main entry point
+piekbs/
+  cmd/piekbs/        # main entry point
   internal/
     kb/                # FTS indexing, search, graph expansion, page fetch
     mcp/               # MCP server (stdio + HTTP)
@@ -192,7 +192,7 @@ wikiloop/
 
 ## Schema & Templates
 
-`wikiloop init` populates the KB's `schema/` directory with bundled authoring rules and page templates:
+`piekbs init` populates the KB's `schema/` directory with bundled authoring rules and page templates:
 
 - `schema/templates/`: Markdown templates for source-note / concept / comparison / decision pages.
 - `schema/references/`: authoring rules — page types, citation rules, conflict rules, directory structure.
@@ -204,54 +204,54 @@ The distill/synthesize prompts read these templates, so editing them customizes 
 ```bash
 export WIKILOOP_KB=/path/to/your-kb
 
-wikiloop init           # scaffold KB dirs and copy schema/templates
-wikiloop serve          # start server: MCP + Web UI + file watcher
-wikiloop index          # build/update FTS index
-wikiloop status         # index stats
-wikiloop lint           # health-check wiki pages
+piekbs init           # scaffold KB dirs and copy schema/templates
+piekbs serve          # start server: MCP + Web UI + file watcher
+piekbs index          # build/update FTS index
+piekbs status         # index stats
+piekbs lint           # health-check wiki pages
 ```
 
 ## Command Reference
 
-All commands accept a global `--kb <path>` flag (defaults to `$WIKILOOP_KB`, then `~/wikiloop-kb`).
+All commands accept a global `--kb <path>` flag (defaults to `$WIKILOOP_KB`, then `~/piekbs-kb`).
 
 | Command | Description |
 |---|---|
-| `wikiloop init [--force]` | Scaffold KB dirs and copy bundled schema/templates. |
-| `wikiloop serve` | Start the long-running server: HTTP MCP (`/mcp`) + Web UI + file watcher. Default when no subcommand is given. |
-| `wikiloop index` | Build/update the FTS index from `wiki/` and `raw/` markdown. |
-| `wikiloop search <query>` | FTS keyword search; prints ranked hits with paths and snippets. |
-| `wikiloop synthesize [--topic X] [--full]` | Generate concept/comparison/decision pages from source-notes. |
-| `wikiloop synthesize --gaps --topic X` | Knowledge-gap analysis for a topic. |
-| `wikiloop import-lark <URL>` | Import a Lark/Feishu Wiki page and its embedded tables into `raw/lark/`. Requires a logged-in `lark-cli`. |
-| `wikiloop lint` | Health-check wiki pages: missing frontmatter fields, broken source links. |
-| `wikiloop status` | Print index stats (document counts, index size). |
-| `wikiloop service <install\|uninstall\|start\|stop\|status\|logs>` | Manage the OS service (launchd / systemd). |
+| `piekbs init [--force]` | Scaffold KB dirs and copy bundled schema/templates. |
+| `piekbs serve` | Start the long-running server: HTTP MCP (`/mcp`) + Web UI + file watcher. Default when no subcommand is given. |
+| `piekbs index` | Build/update the FTS index from `wiki/` and `raw/` markdown. |
+| `piekbs search <query>` | FTS keyword search; prints ranked hits with paths and snippets. |
+| `piekbs synthesize [--topic X] [--full]` | Generate concept/comparison/decision pages from source-notes. |
+| `piekbs synthesize --gaps --topic X` | Knowledge-gap analysis for a topic. |
+| `piekbs import-lark <URL>` | Import a Lark/Feishu Wiki page and its embedded tables into `raw/lark/`. Requires a logged-in `lark-cli`. |
+| `piekbs lint` | Health-check wiki pages: missing frontmatter fields, broken source links. |
+| `piekbs status` | Print index stats (document counts, index size). |
+| `piekbs service <install\|uninstall\|start\|stop\|status\|logs>` | Manage the OS service (launchd / systemd). |
 
 **LLM config** (`config.yaml` under KB root, `distill` section) is required for `distill` and `synthesize`.
 
 ## MCP Server
 
-WikiLoop exposes KB tools via the MCP protocol.
+PieKBS exposes KB tools via the MCP protocol.
 
 **Available tools:** `kb_search`, `kb_page`, `kb_add`
 
-Admin operations (`status`, `reindex`, `lint`) are available via the Web UI or CLI (`wikiloop status`, `wikiloop index`, `wikiloop lint`).
+Admin operations (`status`, `reindex`, `lint`) are available via the Web UI or CLI (`piekbs status`, `piekbs index`, `piekbs lint`).
 
 ---
 
 ### Scenario 1: Local Multi-Agent Sharing
 
-HTTP mode is recommended: one WikiLoop process shared by all agents — Claude Code, Cursor, VS Code (Copilot), Windsurf, Trae, Codex, Hermes, OpenClaw, and others.
+HTTP mode is recommended: one PieKBS process shared by all agents — Claude Code, Cursor, VS Code (Copilot), Windsurf, Trae, Codex, Hermes, OpenClaw, and others.
 
-**Step 1: Start WikiLoop**
+**Step 1: Start PieKBS**
 
 ```bash
-export WIKILOOP_KB=/path/to/wikiloop-kb
-wikiloop serve
+export WIKILOOP_KB=/path/to/piekbs-kb
+piekbs serve
 ```
 
-> On macOS, double-click WikiLoop.app to launch as a menubar icon.
+> On macOS, double-click PieKBS.app to launch as a menubar icon.
 
 **Step 2: Configure HTTP MCP in each agent**
 
@@ -260,7 +260,7 @@ Add to `~/.claude.json` under `mcpServers`:
 ```json
 {
   "mcpServers": {
-    "wikiloop": {
+    "piekbs": {
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
@@ -277,15 +277,15 @@ Add to `~/.claude.json` under `mcpServers`:
 
 ### Scenario 2: Hosted Agent Environments
 
-In hosted environments (Hermes, OpenClaw, etc.), install WikiLoop on the persistent volume and invoke via **stdio** — WikiLoop starts as a subprocess of the agent host, with the watcher running in the background automatically.
+In hosted environments (Hermes, OpenClaw, etc.), install PieKBS on the persistent volume and invoke via **stdio** — PieKBS starts as a subprocess of the agent host, with the watcher running in the background automatically.
 
 Example (NAS-mounted OpenClaw/Hermes, mount point `/root/.openclaw`):
 
 **1. Install to persistent volume (one-time):**
 
 ```bash
-tar -xzf wikiloop-linux-amd64.tar.gz -C /root/.openclaw/wikiloop/
-chmod +x /root/.openclaw/wikiloop/wikiloop
+tar -xzf piekbs-linux-amd64.tar.gz -C /root/.openclaw/piekbs/
+chmod +x /root/.openclaw/piekbs/piekbs
 ```
 
 **2. Install markitdown (recommended):**
@@ -308,11 +308,11 @@ Hermes (`mcp_servers` in agent config):
 
 ```yaml
 mcp_servers:
-  wikiloop:
-    command: /root/.openclaw/wikiloop/wikiloop
+  piekbs:
+    command: /root/.openclaw/piekbs/piekbs
     args: [stdio]
     env:
-      WIKILOOP_KB: /root/.openclaw/wikiloop-kb
+      WIKILOOP_KB: /root/.openclaw/piekbs-kb
       PATH: /root/.openclaw/workspace/bin:/usr/local/bin:/usr/bin:/bin
 ```
 
@@ -329,18 +329,18 @@ Agents with `write_file` access can write directly into the KB — the watcher d
 
 Files in `raw/converted/` are treated as already-converted and go straight to distillation, skipping the markitdown step. All other paths under `raw/` are processed through the full pipeline (convert → index → distill).
 
-Organize subdirectories however makes sense for your content — WikiLoop does not enforce a fixed structure under `raw/`.
+Organize subdirectories however makes sense for your content — PieKBS does not enforce a fixed structure under `raw/`.
 
 ## System Service (optional)
 
-`wikiloop serve` includes a built-in watcher that automatically monitors the KB directory, triggers distill, and rebuilds the index. No additional setup required.
+`piekbs serve` includes a built-in watcher that automatically monitors the KB directory, triggers distill, and rebuilds the index. No additional setup required.
 
-To make WikiLoop **start on boot and run in the background**, install it as a system service (macOS launchd / Linux systemd):
+To make PieKBS **start on boot and run in the background**, install it as a system service (macOS launchd / Linux systemd):
 
 ```bash
-wikiloop service install --kb /path/to/your-kb
-wikiloop service status
-wikiloop service uninstall
+piekbs service install --kb /path/to/your-kb
+piekbs service status
+piekbs service uninstall
 ```
 
 Logs: `{WIKILOOP_KB}/index/watcher.log`

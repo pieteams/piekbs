@@ -5,7 +5,7 @@ package mcp
 import (
 	"errors"
 
-	"github.com/jasen215/wikiloop/internal/kb"
+	"github.com/pieteams/piekbs/internal/kb"
 )
 
 func handleKBStatus(kbRoot string) map[string]interface{} {
