@@ -29,7 +29,7 @@ WHEN TO USE PieKBS:
   - You suspect prior art exists ("have we solved this before?").
 
 HOW TO USE:
-  1. kb_search(query=…) — Search with a keyword or phrase. Returns up to 5
+  1. kb_search(query=…) — Search with keywords or phrases. Returns up to 5
      source-notes + 3 concept/comparison/decision pages. Each result includes
      related documents for further navigation.
   2. Repeat kb_search with DIFFERENT keywords to cover the topic from multiple
@@ -52,6 +52,18 @@ QUERY EXPANSION (mandatory):
     "召回率" → also search "recall", "Context Recall", "CR"
     "蒸馏"   → also search "distill", "source-note", "知识蒸馏"
     "向量数据库" → also search "vector database", "vector store", "Qdrant", "Milvus"
+
+QUERY REWRITE (mandatory):
+  Before searching, rewrite the user's casual question into formal
+  search keywords. The knowledge base uses technical and domain
+  terminology — casual phrasing rarely matches indexed content.
+  Examples:
+    "它为啥这么贵" → "定价策略 成本分析 价格因素"
+    "why is it so expensive" → "pricing strategy cost analysis"
+    "这个功能怎么用" → "使用方法 功能说明 配置步骤"
+    "how does this feature work" → "feature guide configuration setup"
+    "之前的方案怎么样" → "方案评估 实施效果 复盘"
+    "how did the previous plan go" → "plan evaluation implementation review"
 
 DO NOT:
   - Repeat the same query — it returns identical results, switch keywords instead
@@ -117,7 +129,7 @@ func registerTools(s *mcpserver.MCPServer, kbRoot string, embedder kb.Embedder) 
 	// kb_search ──────────────────────────────────────────────────────────────
 	searchTool := mcp.NewTool("kb_search",
 		mcp.WithDescription("Search the PieKBS knowledge base (FTS) and return ranked results."),
-		mcp.WithString("query", mcp.Required(), mcp.Description("Search query")),
+		mcp.WithString("query", mcp.Required(), mcp.Description("Search query (multiple keywords separated by spaces)")),
 		mcp.WithString("layer", mcp.Description("Filter layer: wiki, raw, or schema")),
 		mcp.WithString("kind", mcp.Description("Filter page kind: source-note, concept, comparison, decision")),
 		mcp.WithNumber("limit", mcp.Description("Maximum results (default 10)")),
