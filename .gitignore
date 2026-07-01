@@ -8,6 +8,11 @@ Thumbs.db
 *.swp
 *.swo
 
+# Code intelligence / memory tools
+.code-graph/
+.memory/
+.smallcode/
+
 # Dependencies
 node_modules/
 .venv/
