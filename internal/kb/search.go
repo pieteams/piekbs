@@ -42,6 +42,8 @@ type SearchResult struct {
 	FTSScore     float64      `json:"fts_score,omitempty"`
 	VecScore     float64      `json:"vec_score,omitempty"`
 	HybridScore  float64      `json:"hybrid_score,omitempty"`
+	MatchPhase   int          `json:"match_phase,omitempty"` // 0=AND, 1=OR, 2=LIKE
+	Coverage     int          `json:"coverage,omitempty"`    // 命中查询词条数（AND 结果=总词数，OR/LIKE 由 sortResults 补全）
 	GraphBoost   float64      `json:"graph_boost,omitempty"`
 	Related      []RelatedDoc `json:"related,omitempty"`
 	Conflicts    []string     `json:"conflicts,omitempty"`
@@ -103,6 +105,8 @@ func FTSSearchFiltered(db *sql.DB, query string, layer, kind *string, limit int)
 			for _, r := range res {
 				if !seen[r.ID] {
 					seen[r.ID] = true
+					r.MatchPhase = 0
+					r.Coverage = len(keywords)
 					results = append(results, r)
 				}
 			}
@@ -118,6 +122,7 @@ func FTSSearchFiltered(db *sql.DB, query string, layer, kind *string, limit int)
 		for _, r := range res {
 			if !seen[r.ID] {
 				seen[r.ID] = true
+				r.MatchPhase = 1
 				results = append(results, r)
 			}
 		}
@@ -132,14 +137,14 @@ func FTSSearchFiltered(db *sql.DB, query string, layer, kind *string, limit int)
 		for _, r := range res {
 			if !seen[r.ID] {
 				seen[r.ID] = true
+				r.MatchPhase = 2
 				results = append(results, r)
 			}
 		}
 	}
 
-	// Sort: wiki first, then by fts_rank (lower is better in FTS5).
-	// AND-matched documents naturally rank higher (matched more keywords).
-	sortResults(results)
+	// Sort: WikiPriority → MatchPhase → Coverage → FTSRank.
+	sortResults(results, keywords)
 
 	if len(results) > limit {
 		results = results[:limit]
@@ -250,20 +255,35 @@ func scanResults(db *sql.DB, sqlStr string, args ...interface{}) ([]SearchResult
 	return results, rows.Err()
 }
 
-// sortResults sorts results: wiki layer first, then by FTS rank (ascending, lower = better).
-func sortResults(results []SearchResult) {
-	for i := 1; i < len(results); i++ {
-		for j := i; j > 0; j-- {
-			a, b := results[j-1], results[j]
-			// Higher wiki_priority first; for equal priority, lower fts_rank first.
-			if a.WikiPriority < b.WikiPriority ||
-				(a.WikiPriority == b.WikiPriority && a.FTSRank > b.FTSRank) {
-				results[j-1], results[j] = b, a
-			} else {
-				break
+// sortResults sorts results by: WikiPriority → MatchPhase → Coverage → FTSRank.
+// keywords is used to compute Coverage for OR/LIKE results (AND results already have Coverage set).
+func sortResults(results []SearchResult, keywords []string) {
+	// Compute Coverage for OR/LIKE results by counting keyword hits in Title+Snippet.
+	for i := range results {
+		if results[i].MatchPhase > 0 && len(keywords) > 0 {
+			text := strings.ToLower(results[i].Title + " " + results[i].Snippet)
+			count := 0
+			for _, kw := range keywords {
+				if strings.Contains(text, strings.ToLower(kw)) {
+					count++
+				}
 			}
+			results[i].Coverage = count
 		}
 	}
+	sort.SliceStable(results, func(i, j int) bool {
+		a, b := results[i], results[j]
+		if a.WikiPriority != b.WikiPriority {
+			return a.WikiPriority > b.WikiPriority
+		}
+		if a.MatchPhase != b.MatchPhase {
+			return a.MatchPhase < b.MatchPhase
+		}
+		if a.Coverage != b.Coverage {
+			return a.Coverage > b.Coverage
+		}
+		return a.FTSRank < b.FTSRank
+	})
 }
 
 // splitRe splits on commas (ASCII/fullwidth) or whitespace (one or more).
