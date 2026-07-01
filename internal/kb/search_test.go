@@ -195,6 +195,73 @@ func TestHybridRankSynthesizedBoostIsMultiplicative(t *testing.T) {
 	}
 }
 
+// TestSortResults_MatchPhaseBeatsHigherFTSRank verifies that AND results (MatchPhase=0)
+// rank above OR results (MatchPhase=1) even when the OR result has a better FTSRank,
+// which was the root bug this feature is fixing.
+func TestSortResults_MatchPhaseBeatsHigherFTSRank(t *testing.T) {
+	// OR result has a better (lower) FTSRank than AND result.
+	// Without MatchPhase sorting, the OR result would wrongly win.
+	results := []SearchResult{
+		{ID: "or-doc", Title: "Go Python match", Snippet: "Go Python", WikiPriority: 1.0, FTSRank: -2.0, MatchPhase: 1},
+		{ID: "and-doc", Title: "Go Python full match", Snippet: "Go Python", WikiPriority: 1.0, FTSRank: -1.0, MatchPhase: 0, Coverage: 2},
+	}
+	sortResults(results, []string{"Go", "Python"})
+	if results[0].ID != "and-doc" {
+		t.Errorf("AND result should rank first, but got %q first", results[0].ID)
+	}
+}
+
+// TestSortResults_WikiPriorityBeatsMatchPhase verifies that WikiPriority still wins
+// over MatchPhase: a wiki-layer OR result beats a raw-layer AND result.
+func TestSortResults_WikiPriorityBeatsMatchPhase(t *testing.T) {
+	results := []SearchResult{
+		{ID: "wiki-or", WikiPriority: 1.0, FTSRank: -1.0, MatchPhase: 1},
+		{ID: "raw-and", WikiPriority: 0.0, FTSRank: -2.0, MatchPhase: 0, Coverage: 2},
+	}
+	sortResults(results, []string{"Go"})
+	if results[0].ID != "wiki-or" {
+		t.Errorf("wiki-layer OR should rank first, but got %q first", results[0].ID)
+	}
+}
+
+// TestSortResults_CoverageTiebreaker verifies that among OR results at the same phase,
+// higher Coverage (more keyword hits) ranks first.
+func TestSortResults_CoverageTiebreaker(t *testing.T) {
+	results := []SearchResult{
+		{ID: "low-cov", Title: "Go article", Snippet: "Go language", WikiPriority: 1.0, FTSRank: -2.0, MatchPhase: 1},
+		{ID: "high-cov", Title: "Go Python article", Snippet: "Go Python together", WikiPriority: 1.0, FTSRank: -1.0, MatchPhase: 1},
+	}
+	sortResults(results, []string{"Go", "Python"})
+	// high-cov matches both "go" and "python" in title+snippet; low-cov only matches "go"
+	if results[0].ID != "high-cov" {
+		t.Errorf("higher Coverage should rank first, but got %q first", results[0].ID)
+	}
+}
+
+// TestSortResults_FTSRankFinalTiebreaker verifies that FTSRank (lower=better) is the
+// final tiebreaker when WikiPriority, MatchPhase, and Coverage are all equal.
+func TestSortResults_FTSRankFinalTiebreaker(t *testing.T) {
+	results := []SearchResult{
+		{ID: "worse-rank", WikiPriority: 1.0, FTSRank: -1.0, MatchPhase: 0, Coverage: 2},
+		{ID: "better-rank", WikiPriority: 1.0, FTSRank: -2.0, MatchPhase: 0, Coverage: 2},
+	}
+	sortResults(results, []string{"Go", "Python"})
+	if results[0].ID != "better-rank" {
+		t.Errorf("lower FTSRank (better) should rank first, but got %q first", results[0].ID)
+	}
+}
+
+// TestSearchResultMatchPhaseFields verifies the new struct fields exist and are zero-valued by default.
+func TestSearchResultMatchPhaseFields(t *testing.T) {
+	r := SearchResult{ID: "test", Title: "Test"}
+	if r.MatchPhase != 0 {
+		t.Errorf("default MatchPhase should be 0 (AND), got %d", r.MatchPhase)
+	}
+	if r.Coverage != 0 {
+		t.Errorf("default Coverage should be 0, got %d", r.Coverage)
+	}
+}
+
 func TestMergeRelated(t *testing.T) {
 	a := []RelatedDoc{
 		{ID: "wiki/a.md", Title: "A", Kind: "source-note"},
