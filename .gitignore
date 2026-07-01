@@ -8,6 +8,11 @@ Thumbs.db
 *.swp
 *.swo
 
+# Code intelligence / memory tools
+.code-graph/
+.memory/
+.smallcode/
+
 # Dependencies
 node_modules/
 .venv/
@@ -20,8 +25,8 @@ __pycache__/
 .cache/
 dist/
 build/
-/wikiloop
-/wikiloop.exe
+/piekbs
+/piekbs.exe
 *.log
 
 # Local env
@@ -49,7 +54,7 @@ git.bak/
 # Embedding models (downloaded separately, not committed)
 internal/embed/models/
 
-# WikiLoop generated indexes
+# PieKBS generated indexes
 **/index/*.sqlite
 **/index/*.sqlite-*
 
