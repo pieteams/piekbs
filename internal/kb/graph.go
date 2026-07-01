@@ -4,6 +4,7 @@ package kb
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 )
 
@@ -214,8 +215,8 @@ LIMIT ?`
 // TagExpand returns documents related to docIDs via shared keywords (tags or entity names).
 // hops=1 finds documents sharing a tag with the seed set.
 // hops=2 additionally finds documents sharing a tag with hop-1 documents.
-// High-frequency tags (appearing in > 5% of documents) are excluded to avoid
-// noise from generic terms like "RAG", "AI", "LLM".
+// High-frequency tags (appearing in > 5% of documents, minimum threshold 5) are
+// excluded to avoid noise from generic terms like "RAG", "AI", "LLM".
 // Results exclude the seed set and are capped at limit.
 func TagExpand(db *sql.DB, docIDs []string, hops int, limit int) []GraphNeighbor {
 	if len(docIDs) == 0 || hops < 1 || limit < 1 {
@@ -225,10 +226,17 @@ func TagExpand(db *sql.DB, docIDs []string, hops int, limit int) []GraphNeighbor
 	ph := placeholders(len(docIDs))
 	seedArgs := stringsToArgs(docIDs)
 
-	// idfFilter excludes tags appearing in more than 5% of all documents.
-	// This is equivalent to IDF < log(20) ≈ 3.0, filtering generic terms.
-	const idfFilter = `AND (SELECT COUNT(DISTINCT doc_id) FROM document_tags WHERE tag = dt1.tag) * 20
-	  <= (SELECT COUNT(*) FROM documents)`
+	// idfFilter excludes tags appearing in too many documents (generic terms like
+	// "RAG", "AI", "LLM"). Threshold is 5% of total docs, with a floor of 5 to
+	// avoid over-filtering in small databases (<100 documents).
+	var totalDocs int
+	db.QueryRow(`SELECT COUNT(*) FROM documents`).Scan(&totalDocs)
+	threshold := totalDocs / 20
+	if threshold < 5 {
+		threshold = 5
+	}
+	idfFilter := fmt.Sprintf(
+		`AND (SELECT COUNT(DISTINCT doc_id) FROM document_tags WHERE tag = dt1.tag) <= %d`, threshold)
 
 	// hop1: documents sharing a non-generic tag with seeds, excluding seeds
 	hop1SQL := `
@@ -262,8 +270,7 @@ JOIN document_tags dt4 ON dt3.tag = dt4.tag
 WHERE dt3.doc_id IN (` + ph1 + `)
   AND dt4.doc_id NOT IN (` + ph + `)
   AND dt4.doc_id NOT IN (` + ph1 + `)
-  AND (SELECT COUNT(DISTINCT doc_id) FROM document_tags WHERE tag = dt3.tag) * 20
-	  <= (SELECT COUNT(*) FROM documents)`
+  AND (SELECT COUNT(DISTINCT doc_id) FROM document_tags WHERE tag = dt3.tag) <= ` + fmt.Sprintf("%d", threshold)
 
 		hop1Copy := stringsToArgs(hop1IDs)
 		hop2Args := append(hop1Args2, seedArgs...)
