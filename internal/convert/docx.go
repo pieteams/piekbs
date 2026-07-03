@@ -6,6 +6,7 @@ import (
 	"archive/zip"
 	"encoding/xml"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -20,17 +21,65 @@ func (p *DocxParser) Extract(path string) (string, error) {
 		return "", fmt.Errorf("extract docx: %w", err)
 	}
 	defer r.Close()
+
+	var text string
+	var embeddedXlsx []string
+
 	for _, f := range r.File {
 		if f.Name == "word/document.xml" {
 			rc, err := f.Open()
 			if err != nil {
 				return "", fmt.Errorf("extract docx: open document.xml: %w", err)
 			}
-			defer rc.Close()
-			return extractDocxText(rc), nil
+			text = extractDocxText(rc)
+			rc.Close()
+		}
+		// Collect embedded Excel files
+		if strings.HasPrefix(f.Name, "word/embeddings/") && strings.HasSuffix(strings.ToLower(f.Name), ".xlsx") {
+			embeddedXlsx = append(embeddedXlsx, f.Name)
 		}
 	}
-	return "", fmt.Errorf("extract docx: no document.xml in %s", path)
+
+	if text == "" {
+		return "", fmt.Errorf("extract docx: no document.xml in %s", path)
+	}
+
+	// Extract embedded Excel files and append to output
+	for _, name := range embeddedXlsx {
+		for _, f := range r.File {
+			if f.Name != name {
+				continue
+			}
+			rc, err := f.Open()
+			if err != nil {
+				continue
+			}
+			// Write embedded xlsx to temp file for XlsxParser
+			tmp, err := os.CreateTemp("", "docx-embed-*.xlsx")
+			if err != nil {
+				rc.Close()
+				continue
+			}
+			if _, err := tmp.ReadFrom(rc); err != nil {
+				rc.Close()
+				tmp.Close()
+				os.Remove(tmp.Name())
+				continue
+			}
+			rc.Close()
+			tmp.Close()
+
+			xlsxParser := &XlsxParser{}
+			xlText, err := xlsxParser.Extract(tmp.Name())
+			os.Remove(tmp.Name())
+			if err != nil || xlText == "" {
+				continue
+			}
+			text += "\n\n--- Embedded Spreadsheet: " + name + " ---\n\n" + xlText
+		}
+	}
+
+	return text, nil
 }
 
 // extractDocxText parses DOCX XML with awareness of table structure.
