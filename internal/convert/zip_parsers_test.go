@@ -34,10 +34,10 @@ func createTestXlsx(t *testing.T, dir string) string {
 	}
 	zw := zip.NewWriter(f)
 	w1, _ := zw.Create("xl/sharedStrings.xml")
-	w1.Write([]byte(`<?xml version="1.0"?><sst><si><t>Foo</t></si><si><t>Bar</t></si></sst>`))
-	// Contains shared string cells (<t>) and numeric cells (<v>)
+	w1.Write([]byte(`<?xml version="1.0"?><sst><si><t>Name</t></si><si><t>Value</t></si><si><t>Foo</t></si></sst>`))
+	// Header row uses shared strings (t="s"), data row has shared string + numeric cell
 	w2, _ := zw.Create("xl/worksheets/sheet1.xml")
-	w2.Write([]byte(`<?xml version="1.0"?><worksheet><sheetData><row><c><t>Foo</t></c><c t="n"><v>42</v></c></row></sheetData></worksheet>`))
+	w2.Write([]byte(`<?xml version="1.0"?><worksheet><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c></row><row r="2"><c r="A2" t="s"><v>2</v></c><c r="B2"><v>42</v></c></row></sheetData></worksheet>`))
 	zw.Close()
 	f.Close()
 	return path
