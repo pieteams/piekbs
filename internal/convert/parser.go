@@ -60,32 +60,12 @@ func (r *Registry) Extensions() []string {
 	return exts
 }
 
-// Stub parsers — Task 2/3 will replace these with real implementations.
+// Stub parsers — Task 3 will replace these with real implementations.
 // Each stub allows Registry tests to compile and run.
-type DocxParser struct{}
-
-func (p *DocxParser) Extensions() []string             { return []string{".docx"} }
-func (p *DocxParser) Extract(path string) (string, error) { return "", nil }
-
-type XlsxParser struct{}
-
-func (p *XlsxParser) Extensions() []string             { return []string{".xlsx"} }
-func (p *XlsxParser) Extract(path string) (string, error) { return "", nil }
-
-type PptxParser struct{}
-
-func (p *PptxParser) Extensions() []string             { return []string{".pptx"} }
-func (p *PptxParser) Extract(path string) (string, error) { return "", nil }
-
 type PDFParser struct{}
 
 func (p *PDFParser) Extensions() []string             { return []string{".pdf"} }
 func (p *PDFParser) Extract(path string) (string, error) { return "", nil }
-
-type EpubParser struct{}
-
-func (p *EpubParser) Extensions() []string             { return []string{".epub"} }
-func (p *EpubParser) Extract(path string) (string, error) { return "", nil }
 
 type HTMLParser struct{}
 
