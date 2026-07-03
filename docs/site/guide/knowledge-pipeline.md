@@ -36,11 +36,5 @@ Agents use `kb_search` + `kb_page` via MCP. Search is pure FTS (SQLite FTS5 with
 | Format | Processing |
 |---|---|
 | `.md`, `.txt` | Direct distillation |
-| PDF, Word, Excel, PPT, HTML | Converted via `markitdown`, then distilled |
+| PDF, Word, Excel, PPT, EPUB, HTML, CSV, Email | Converted via built-in pure Go converter, then distilled |
 | Agent-converted content | Write to `raw/converted/` to skip conversion step |
-
-Install `markitdown` to enable binary file support:
-
-```bash
-pip install markitdown
-```

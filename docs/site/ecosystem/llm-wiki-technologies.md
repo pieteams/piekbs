@@ -77,7 +77,7 @@ Raw docs → LLM distills → wiki pages → [query time] → FTS / graph → re
 
 | Technology | Notes |
 |---|---|
-| markitdown (Microsoft) | Converts PDF, Word, Excel, PPT, HTML to Markdown before distillation. |
+| Built-in pure Go converter | Converts PDF, Word, Excel, PPT, EPUB, HTML, CSV, and Email to Markdown before distillation. No external tools required. |
 | `raw/converted/` pattern | Agent-extracted content written directly here — skips conversion, goes straight to distillation. |
 | File watcher | Auto-detects new/changed files in `raw/`, triggers convert → distill → index pipeline. |
 

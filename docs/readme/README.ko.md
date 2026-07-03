@@ -288,19 +288,9 @@ tar -xzf piekbs-linux-amd64.tar.gz -C /root/.openclaw/piekbs/
 chmod +x /root/.openclaw/piekbs/piekbs
 ```
 
-**2. markitdown 설치 (권장):**
+**2. 외부 도구가 필요하지 않습니다.**
 
-markitdown을 사용하면 PDF, Word, Excel, PPT, HTML 파일을 Markdown으로 변환한 후 정제할 수 있습니다. 없으면 `.md`와 `.txt` 파일만 정제되고, 바이너리 파일은 파일 이름으로만 인덱싱됩니다.
-
-```bash
-pip install markitdown
-# 확인
-markitdown --version
-```
-
-> OpenClaw/Hermes에서 검증됨 (경로: `/root/.openclaw/workspace/bin/markitdown`). `workspace/bin`을 PATH에 추가하거나 환경에서 전체 경로를 설정합니다.
-
-markitdown을 사용할 수 없는 경우, 에이전트는 텍스트를 직접 추출하여 (LLM vision 또는 다른 도구 사용) 결과를 `$PIEKBS_KB/raw/converted/<slug>.md`에 직접 쓸 수 있습니다 — watcher가 자동으로 처리합니다.
+PieKBS에는 PDF, Word, Excel, PPT, EPUB, HTML, CSV 및 이메일 파일을 위한 내장 순수 Go 변환 기능이 포함되어 있습니다. 추가 설치가 필요 없으며 바이너리 파일 변환이 즉시 작동합니다.
 
 **3. MCP 설정:**
 
@@ -327,7 +317,7 @@ KB 디렉토리는 첫 실행 시 자동으로 생성됩니다. 수동 `init` �
 | 기사, 노트, 참조 자료 (Markdown/텍스트) | `$PIEKBS_KB/raw/<카테고리>/<slug>.md` |
 | 에이전트가 변환한 PDF/Word/Excel/EPUB 콘텐츠 | `$PIEKBS_KB/raw/converted/<slug>.md` |
 
-`raw/converted/`의 파일은 이미 변환된 것으로 처리되어 markitdown 단계를 건너뛰고 바로 정제됩니다. `raw/` 아래의 다른 모든 경로는 전체 파이프라인 (변환 → 인덱싱 → 정제)을 통해 처리됩니다.
+`raw/converted/`의 파일은 이미 변환된 것으로 처리되어 변환 단계를 건너뛰고 바로 정제됩니다. `raw/` 아래의 다른 모든 경로는 전체 파이프라인 (변환 → 인덱싱 → 정제)을 통해 처리됩니다.
 
 `raw/` 아래의 하위 디렉토리는 콘텐츠에 맞게 자유롭게 구성하세요 — PieKBS는 `raw/` 아래에 고정된 구조를 강요하지 않습니다.
 

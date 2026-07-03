@@ -77,7 +77,7 @@ LLM Wiki（知识编译范式）背后的核心技术——知识在写入时预
 
 | 技术 | 说明 |
 |---|---|
-| markitdown（Microsoft） | 将 PDF、Word、Excel、PPT、HTML 转为 Markdown 后再提炼。 |
+| 内置纯 Go 转换器 | 将 PDF、Word、Excel、PPT、EPUB、HTML、CSV 和邮件转为 Markdown 后再提炼。无需外部工具。 |
 | `raw/converted/` 模式 | Agent 提取的内容直接写入此目录——跳过转换，直接进入提炼流程。 |
 | 文件监听器（Watcher） | 自动检测 `raw/` 下的新文件/变更文件，触发转换 → 提炼 → 索引全流程。 |
 

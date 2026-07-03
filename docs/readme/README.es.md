@@ -288,19 +288,9 @@ tar -xzf piekbs-linux-amd64.tar.gz -C /root/.openclaw/piekbs/
 chmod +x /root/.openclaw/piekbs/piekbs
 ```
 
-**2. Instalar markitdown (recomendado):**
+**2. No se necesitan herramientas externas.**
 
-markitdown permite la conversión de archivos PDF, Word, Excel, PPT y HTML a Markdown antes de la destilación. Sin él, solo se destilan archivos `.md` y `.txt`; los archivos binarios se indexan solo por nombre de archivo.
-
-```bash
-pip install markitdown
-# verificar
-markitdown --version
-```
-
-> Verificado en OpenClaw/Hermes (ruta: `/root/.openclaw/workspace/bin/markitdown`). Agregue `workspace/bin` al PATH o establezca la ruta completa en su entorno.
-
-Si markitdown no está disponible, los agentes pueden extraer texto ellos mismos (usando LLM vision u otras herramientas) y escribir el resultado directamente en `$PIEKBS_KB/raw/converted/<slug>.md` — el watcher lo recoge automáticamente.
+PieKBS incluye conversión Pure Go integrada para archivos PDF, Word, Excel, PPT, EPUB, HTML, CSV y Email. No se requiere instalación adicional — la conversión de archivos binarios funciona de inmediato.
 
 **3. Configuración MCP:**
 
@@ -327,7 +317,7 @@ Los agentes con acceso `write_file` pueden escribir directamente en la KB — el
 | Artículos, notas, referencias (Markdown/texto) | `$PIEKBS_KB/raw/<su-categoría>/<slug>.md` |
 | Contenido PDF/Word/Excel/EPUB convertido por agente | `$PIEKBS_KB/raw/converted/<slug>.md` |
 
-Los archivos en `raw/converted/` se tratan como ya convertidos y van directamente a la destilación, omitiendo el paso de markitdown. Todas las demás rutas bajo `raw/` se procesan a través del pipeline completo (convertir → indexar → destilar).
+Los archivos en `raw/converted/` se tratan como ya convertidos y van directamente a la destilación, omitiendo el paso de conversión. Todas las demás rutas bajo `raw/` se procesan a través del pipeline completo (convertir → indexar → destilar).
 
 Organice los subdirectorios según lo que tenga sentido para su contenido — PieKBS no impone una estructura fija bajo `raw/`.
 

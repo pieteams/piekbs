@@ -288,19 +288,9 @@ tar -xzf piekbs-linux-amd64.tar.gz -C /root/.openclaw/piekbs/
 chmod +x /root/.openclaw/piekbs/piekbs
 ```
 
-**2. Installer markitdown (recommandé) :**
+**2. Aucun outil externe nécessaire.**
 
-markitdown permet la conversion de fichiers PDF, Word, Excel, PPT et HTML en Markdown avant la distillation. Sans lui, seuls les fichiers `.md` et `.txt` sont distillés ; les fichiers binaires sont indexés uniquement par nom de fichier.
-
-```bash
-pip install markitdown
-# vérifier
-markitdown --version
-```
-
-> Vérifié sur OpenClaw/Hermes (chemin : `/root/.openclaw/workspace/bin/markitdown`). Ajoutez `workspace/bin` au PATH ou définissez le chemin complet dans votre environnement.
-
-Si markitdown n'est pas disponible, les agents peuvent extraire le texte eux-mêmes (avec LLM vision ou d'autres outils) et écrire le résultat directement dans `$PIEKBS_KB/raw/converted/<slug>.md` — le watcher le récupère automatiquement.
+PieKBS inclut une conversion Pure Go intégrée pour les fichiers PDF, Word, Excel, PPT, EPUB, HTML, CSV et Email. Aucune installation supplémentaire requise — la conversion des fichiers binaires fonctionne immédiatement.
 
 **3. Configuration MCP :**
 
@@ -327,7 +317,7 @@ Les agents avec accès `write_file` peuvent écrire directement dans la KB — l
 | Articles, notes, références (Markdown/texte) | `$PIEKBS_KB/raw/<votre-catégorie>/<slug>.md` |
 | Contenu PDF/Word/Excel/EPUB converti par agent | `$PIEKBS_KB/raw/converted/<slug>.md` |
 
-Les fichiers dans `raw/converted/` sont traités comme déjà convertis et vont directement à la distillation, sautant l'étape markitdown. Tous les autres chemins sous `raw/` sont traités par le pipeline complet (convertir → indexer → distiller).
+Les fichiers dans `raw/converted/` sont traités comme déjà convertis et vont directement à la distillation, sautant l'étape de conversion. Tous les autres chemins sous `raw/` sont traités par le pipeline complet (convertir → indexer → distiller).
 
 Organisez les sous-répertoires selon ce qui est logique pour votre contenu — PieKBS n'impose pas de structure fixe sous `raw/`.
 

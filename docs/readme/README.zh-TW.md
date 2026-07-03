@@ -288,19 +288,9 @@ tar -xzf piekbs-linux-amd64.tar.gz -C /root/.openclaw/piekbs/
 chmod +x /root/.openclaw/piekbs/piekbs
 ```
 
-**2. 安裝 markitdown（推薦）：**
+**2. 無需安裝外部工具。**
 
-markitdown 支援將 PDF、Word、Excel、PPT、HTML 檔案轉換為 Markdown 後再蒸餾。未安裝時，僅 `.md` 和 `.txt` 檔案會被蒸餾；二進位檔案僅按檔名建索引。
-
-```bash
-pip install markitdown
-# 驗證
-markitdown --version
-```
-
-> 已在 OpenClaw/Hermes 上驗證可用（路徑：`/root/.openclaw/workspace/bin/markitdown`）。將 `workspace/bin` 加入 PATH，或在環境中設定完整路徑。
-
-如果 markitdown 不可用，Agent 可自行提取文字（使用 LLM 視覺或其他工具），直接將結果寫入 `$PIEKBS_KB/raw/converted/<slug>.md`——watcher 會自動拾取。
+PieKBS 內建純 Go 轉換引擎，支援 PDF、Word、Excel、PPT、EPUB、HTML、CSV 和郵件檔案。無需額外安裝，二進位檔案轉換開箱即用。
 
 **3. MCP 設定：**
 
@@ -327,7 +317,7 @@ KB 目錄在首次啟動時自動建立，無需手動執行 `init`。
 | 文章、筆記、參考資料（Markdown/文字） | `$PIEKBS_KB/raw/<你的分類>/<slug>.md` |
 | Agent 轉換的 PDF / Word / Excel / EPUB 內容 | `$PIEKBS_KB/raw/converted/<slug>.md` |
 
-`raw/converted/` 中的檔案被視為已轉換，直接進入蒸餾，跳過 markitdown 步驟。`raw/` 下其他路徑均經過完整流水線處理（轉換 → 建索引 → 蒸餾）。
+`raw/converted/` 中的檔案被視為已轉換，直接進入蒸餾，跳過轉換步驟。`raw/` 下其他路徑均經過完整流水線處理（轉換 → 建索引 → 蒸餾）。
 
 `raw/` 下的子目錄組織方式不限——PieKBS 不強制規定固定結構。
 

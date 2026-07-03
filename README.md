@@ -288,19 +288,9 @@ tar -xzf piekbs-linux-amd64.tar.gz -C /root/.openclaw/piekbs/
 chmod +x /root/.openclaw/piekbs/piekbs
 ```
 
-**2. Install markitdown (recommended):**
+**2. No external tools needed.**
 
-markitdown enables conversion of PDF, Word, Excel, PPT, and HTML files to Markdown before distillation. Without it, only `.md` and `.txt` files are distilled; binary files are indexed by filename only.
-
-```bash
-pip install markitdown
-# verify
-markitdown --version
-```
-
-> Verified working on OpenClaw/Hermes (path: `/root/.openclaw/workspace/bin/markitdown`). Add `workspace/bin` to PATH or set the full path in your environment.
-
-If markitdown is unavailable, agents can extract text themselves (using LLM vision or other tools) and write the result directly to `$PIEKBS_KB/raw/converted/<slug>.md` — the watcher picks it up automatically.
+PieKBS includes built-in pure Go conversion for PDF, Word, Excel, PPT, EPUB, HTML, CSV, and Email files. No additional installation required — binary file conversion works out of the box.
 
 **3. MCP configuration:**
 
@@ -327,7 +317,7 @@ Agents with `write_file` access can write directly into the KB — the watcher d
 | Articles, notes, references (Markdown/text) | `$PIEKBS_KB/raw/<your-category>/<slug>.md` |
 | Agent-converted PDF / Word / Excel / EPUB content | `$PIEKBS_KB/raw/converted/<slug>.md` |
 
-Files in `raw/converted/` are treated as already-converted and go straight to distillation, skipping the markitdown step. All other paths under `raw/` are processed through the full pipeline (convert → index → distill).
+Files in `raw/converted/` are treated as already-converted and go straight to distillation, skipping the conversion step. All other paths under `raw/` are processed through the full pipeline (convert → index → distill).
 
 Organize subdirectories however makes sense for your content — PieKBS does not enforce a fixed structure under `raw/`.
 

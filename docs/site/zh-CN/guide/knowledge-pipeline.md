@@ -36,11 +36,5 @@ Agent 通过 MCP 使用 `kb_search` + `kb_page`。搜索是纯 FTS（SQLite FTS5
 | 格式 | 处理方式 |
 |---|---|
 | `.md`、`.txt` | 直接提炼 |
-| PDF、Word、Excel、PPT、HTML | 通过 `markitdown` 转换后提炼 |
+| PDF、Word、Excel、PPT、EPUB、HTML、CSV、邮件 | 通过内置纯 Go 转换器处理后提炼 |
 | Agent 转换的内容 | 写入 `raw/converted/` 跳过转换步骤 |
-
-安装 `markitdown` 以支持二进制文件：
-
-```bash
-pip install markitdown
-```

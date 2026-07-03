@@ -288,19 +288,9 @@ tar -xzf piekbs-linux-amd64.tar.gz -C /root/.openclaw/piekbs/
 chmod +x /root/.openclaw/piekbs/piekbs
 ```
 
-**2. markitdown installieren (empfohlen):**
+**2. Keine externen Tools erforderlich.**
 
-markitdown ermöglicht die Konvertierung von PDF-, Word-, Excel-, PPT- und HTML-Dateien in Markdown vor der Destillation. Ohne es werden nur `.md`- und `.txt`-Dateien destilliert; Binärdateien werden nur nach Dateinamen indiziert.
-
-```bash
-pip install markitdown
-# überprüfen
-markitdown --version
-```
-
-> Auf OpenClaw/Hermes verifiziert (Pfad: `/root/.openclaw/workspace/bin/markitdown`). `workspace/bin` zum PATH hinzufügen oder vollständigen Pfad in Ihrer Umgebung setzen.
-
-Wenn markitdown nicht verfügbar ist, können Agenten selbst Text extrahieren (mit LLM Vision oder anderen Tools) und das Ergebnis direkt in `$PIEKBS_KB/raw/converted/<slug>.md` schreiben — der Watcher nimmt es automatisch auf.
+PieKBS enthält eine eingebaute Pure-Go-Konvertierung für PDF, Word, Excel, PPT, EPUB, HTML, CSV und E-Mail-Dateien. Keine zusätzliche Installation nötig — die Konvertierung von Binärdateien funktioniert sofort.
 
 **3. MCP-Konfiguration:**
 
@@ -327,7 +317,7 @@ Agenten mit `write_file`-Zugriff können direkt in die KB schreiben — der Watc
 | Artikel, Notizen, Referenzen (Markdown/Text) | `$PIEKBS_KB/raw/<ihre-kategorie>/<slug>.md` |
 | Von Agenten konvertierter PDF/Word/Excel/EPUB-Inhalt | `$PIEKBS_KB/raw/converted/<slug>.md` |
 
-Dateien in `raw/converted/` werden als bereits konvertiert behandelt und gehen direkt zur Destillation, überspringen den markitdown-Schritt. Alle anderen Pfade unter `raw/` werden durch die vollständige Pipeline verarbeitet (Konvertieren → Indizieren → Destillieren).
+Dateien in `raw/converted/` werden als bereits konvertiert behandelt und gehen direkt zur Destillation, überspringen den Konvertierungsschritt. Alle anderen Pfade unter `raw/` werden durch die vollständige Pipeline verarbeitet (Konvertieren → Indizieren → Destillieren).
 
 Unterverzeichnisse nach eigenem Ermessen organisieren — PieKBS erzwingt keine feste Struktur unter `raw/`.
 
