@@ -27,7 +27,9 @@ func (p *PDFParser) Extract(path string) (string, error) {
 
 	f, r, err := pdf.Open(actualPath)
 	if err != nil {
-		return "", fmt.Errorf("extract pdf: %w", err)
+		// Malformed PDF — return a placeholder document so the watcher
+		// won't retry this file endlessly.
+		return placeholderDoc(path, "malformed or encrypted PDF"), nil
 	}
 	defer f.Close()
 	var text strings.Builder
@@ -45,9 +47,21 @@ func (p *PDFParser) Extract(path string) (string, error) {
 	}
 	result := strings.TrimSpace(text.String())
 	if result == "" {
-		return "", fmt.Errorf("extract pdf: no text content in %s", path)
+		// Scanned PDF (images only, no embedded text) — return a placeholder.
+		return placeholderDoc(path, "scanned PDF (images only, no embedded text)"), nil
 	}
 	return result, nil
+}
+
+// placeholderDoc returns a Markdown document explaining why conversion failed.
+// This prevents the watcher from retrying the file endlessly.
+func placeholderDoc(path, reason string) string {
+	return fmt.Sprintf("# PDF Conversion Failed\n\n"+
+		"**File:** %s\n\n"+
+		"**Reason:** %s\n\n"+
+		"This file could not be converted to text. "+
+		"To index its content, please convert it manually (e.g. using OCR tools) "+
+		"and place the result in `raw/converted/`.\n", path, reason)
 }
 
 // fixPDFHeader checks if a PDF has a space between the version number and the
