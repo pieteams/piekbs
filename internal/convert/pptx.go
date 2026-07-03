@@ -23,20 +23,24 @@ func (p *PptxParser) Extract(path string) (string, error) {
 	}
 	defer r.Close()
 
-	// 1. Build rId → embedded file path map from slide relationships
+	// 1. Get slide order from presentation.xml
+	slideOrder := pptxSlideOrder(r)
+
+	// 2. Build rId → embedded file path map from slide relationships
 	relsMap := parsePptxRels(r)
 
-	// 2. Pre-extract embedded Excel files
+	// 3. Pre-extract embedded Excel files
 	embedCache := extractPptxEmbeds(r, relsMap)
 
-	// 3. Extract slide text with table awareness and embedded content
+	// 4. Extract slide text in presentation order
 	var text strings.Builder
 	slideNum := 0
-	for _, f := range r.File {
-		if !strings.HasPrefix(f.Name, "ppt/slides/slide") || !strings.HasSuffix(f.Name, ".xml") {
+	for _, slidePath := range slideOrder {
+		slideFile := findZipFile(r, slidePath)
+		if slideFile == nil {
 			continue
 		}
-		rc, err := f.Open()
+		rc, err := slideFile.Open()
 		if err != nil {
 			continue
 		}
@@ -49,6 +53,100 @@ func (p *PptxParser) Extract(path string) (string, error) {
 		}
 	}
 	return strings.TrimSpace(text.String()), nil
+}
+
+// pptxSlideOrder reads presentation.xml to get the slide order defined in <p:sldIdLst>.
+func pptxSlideOrder(r *zip.ReadCloser) []string {
+	// 1. Parse presentation.xml.rels to map r:id → slide path
+	presRelsMap := make(map[string]string)
+	for _, f := range r.File {
+		if f.Name != "ppt/_rels/presentation.xml.rels" {
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			return nil
+		}
+		decoder := xml.NewDecoder(rc)
+		for {
+			tok, err := decoder.Token()
+			if err != nil {
+				break
+			}
+			if se, ok := tok.(xml.StartElement); ok && se.Name.Local == "Relationship" {
+				var id, target, relType string
+				for _, attr := range se.Attr {
+					switch attr.Name.Local {
+					case "Id":
+						id = attr.Value
+					case "Target":
+						target = attr.Value
+					case "Type":
+						relType = attr.Value
+					}
+				}
+				if id != "" && target != "" && strings.Contains(relType, "slide") && !strings.Contains(relType, "slideLayout") && !strings.Contains(relType, "slideMaster") && !strings.Contains(relType, "notesSlide") {
+					presRelsMap[id] = "ppt/" + target
+				}
+			}
+		}
+		rc.Close()
+		break
+	}
+
+	// 2. Parse presentation.xml to get slide order from <p:sldIdLst>
+	for _, f := range r.File {
+		if f.Name != "ppt/presentation.xml" {
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			return nil
+		}
+		var result []string
+		decoder := xml.NewDecoder(rc)
+		inSldIdLst := false
+		for {
+			tok, err := decoder.Token()
+			if err != nil {
+				break
+			}
+			switch t := tok.(type) {
+			case xml.StartElement:
+				if t.Name.Local == "sldIdLst" {
+					inSldIdLst = true
+				}
+				if inSldIdLst && t.Name.Local == "sldId" {
+					for _, attr := range t.Attr {
+						if attr.Name.Local == "id" && attr.Name.Space == "http://schemas.openxmlformats.org/officeDocument/2006/relationships" {
+							if slidePath, ok := presRelsMap[attr.Value]; ok {
+								result = append(result, slidePath)
+							}
+						}
+					}
+				}
+			case xml.EndElement:
+				if t.Name.Local == "sldIdLst" {
+					inSldIdLst = false
+				}
+			}
+		}
+		rc.Close()
+		if len(result) > 0 {
+			return result
+		}
+	}
+	return nil
+}
+
+// findZipFile looks up a file by exact name in the ZIP archive.
+func findZipFile(r *zip.ReadCloser, name string) *zip.File {
+	for _, f := range r.File {
+		if f.Name == name {
+			return f
+		}
+	}
+	return nil
 }
 
 // parsePptxRels parses all ppt/slides/_rels/slide*.xml.rels and returns rId → target path map.

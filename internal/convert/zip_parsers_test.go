@@ -53,6 +53,12 @@ func createTestPptx(t *testing.T, dir string) string {
 	zw := zip.NewWriter(f)
 	w, _ := zw.Create("ppt/slides/slide1.xml")
 	w.Write([]byte(`<?xml version="1.0"?><p:sld><p:cSld><p:spTree><p:sp><p:txBody><a:p><a:r><a:t>Slide One</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>`))
+	// presentation.xml with slide order (r namespace declared)
+	pres, _ := zw.Create("ppt/presentation.xml")
+	pres.Write([]byte(`<?xml version="1.0"?><p:presentation xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><p:sldIdLst><p:sldId r:id="rId1"></p:sldId></p:sldIdLst></p:presentation>`))
+	// presentation.xml.rels
+	presRels, _ := zw.Create("ppt/_rels/presentation.xml.rels")
+	presRels.Write([]byte(`<?xml version="1.0"?><Relationships><Relationship Id="rId1" Target="slides/slide1.xml" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide"/></Relationships>`))
 	zw.Close()
 	f.Close()
 	return path
