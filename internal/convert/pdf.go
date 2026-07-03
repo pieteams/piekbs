@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -53,7 +54,10 @@ func (p *PDFParser) Extract(path string) (string, error) {
 		return placeholderDoc(path, "scanned PDF (images only, no embedded text)"), nil
 	}
 	if isGarbled(result) {
-		// Font encoding issue — characters not properly decoded.
+		// Font encoding issue — try Ghostscript as fallback (handles CJK fonts).
+		if gsText, err := extractPDFWithGS(path); err == nil && gsText != "" && !isGarbled(gsText) {
+			return gsText, nil
+		}
 		return placeholderDoc(path, "font encoding issue (garbled text, likely CJK PDF with custom fonts)"), nil
 	}
 	return result, nil
@@ -145,4 +149,31 @@ func isGarbled(s string) bool {
 	}
 	// If more than 20% of characters are garbled, consider the text unreadable
 	return float64(garbled)/float64(total) > 0.20
+}
+
+// extractPDFWithGS uses Ghostscript (gs) to extract text from a PDF.
+// This handles CJK fonts and complex encodings that the pure Go parser cannot.
+// Returns empty string if gs is not available or extraction fails.
+func extractPDFWithGS(path string) (string, error) {
+	gsPath, err := exec.LookPath("gs")
+	if err != nil {
+		return "", fmt.Errorf("gs not found in PATH")
+	}
+	tmp, err := os.CreateTemp("", "gs-text-*.txt")
+	if err != nil {
+		return "", err
+	}
+	tmp.Close()
+	defer os.Remove(tmp.Name())
+
+	cmd := exec.Command(gsPath, "-dNOPAUSE", "-dBATCH", "-sDEVICE=txtwrite", "-sOutputFile="+tmp.Name(), path)
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("gs failed: %w", err)
+	}
+	data, err := os.ReadFile(tmp.Name())
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(data)), nil
 }
