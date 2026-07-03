@@ -89,3 +89,34 @@ func TestInjectEmbeddedXlsx_NoEmbeddings(t *testing.T) {
 		t.Errorf("expected placeholder to remain, got: %s", result)
 	}
 }
+
+func TestRun_Integration(t *testing.T) {
+	dir := t.TempDir()
+	rawDir := filepath.Join(dir, "raw")
+	if err := os.MkdirAll(rawDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a CSV file
+	if err := os.WriteFile(filepath.Join(rawDir, "data.csv"), []byte("name,age\nAlice,30\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	n, err := Run(dir)
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+	if n != 1 {
+		t.Errorf("expected 1 file converted, got %d", n)
+	}
+
+	// Verify output exists
+	convertedPath := filepath.Join(rawDir, "converted", "data.md")
+	data, err := os.ReadFile(convertedPath)
+	if err != nil {
+		t.Fatalf("converted file not found: %v", err)
+	}
+	if !strings.Contains(string(data), "Alice") {
+		t.Errorf("expected 'Alice' in converted output, got: %s", data)
+	}
+}
