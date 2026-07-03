@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/ledongthuc/pdf"
 )
@@ -49,6 +51,10 @@ func (p *PDFParser) Extract(path string) (string, error) {
 	if result == "" {
 		// Scanned PDF (images only, no embedded text) — return a placeholder.
 		return placeholderDoc(path, "scanned PDF (images only, no embedded text)"), nil
+	}
+	if isGarbled(result) {
+		// Font encoding issue — characters not properly decoded.
+		return placeholderDoc(path, "font encoding issue (garbled text, likely CJK PDF with custom fonts)"), nil
 	}
 	return result, nil
 }
@@ -94,4 +100,49 @@ func fixPDFHeader(path string) (string, func(), error) {
 
 	// No fix needed
 	return path, func() {}, nil
+}
+
+// isGarbled checks if text appears to be garbled due to font encoding issues.
+// Heuristic: if too many bytes are non-printable or invalid UTF-8, the text
+// is likely not properly decoded. This commonly happens with CJK PDFs that
+// use custom font encodings without proper ToUnicode CMap tables.
+func isGarbled(s string) bool {
+	if len(s) < 50 {
+		return false // too short to judge
+	}
+	// Sample first 2000 runes for performance
+	sample := s
+	if len(sample) > 2000 {
+		sample = sample[:2000]
+	}
+	total := 0
+	garbled := 0
+	for _, r := range sample {
+		total++
+		if r == '\n' || r == '\r' || r == '\t' || r == ' ' {
+			continue
+		}
+		if r >= 0x20 && r <= 0x7E {
+			continue // printable ASCII
+		}
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || unicode.IsPunct(r) {
+			continue // valid Unicode
+		}
+		// Check for invalid UTF-8 sequences
+		if !utf8.ValidString(string(r)) {
+			garbled++
+			continue
+		}
+		// High bytes that are not valid CJK or other known ranges
+		if r > 0xFF {
+			continue // likely valid Unicode (CJK, etc.)
+		}
+		// Bytes 0x80-0xFF that are not part of valid UTF-8
+		garbled++
+	}
+	if total == 0 {
+		return false
+	}
+	// If more than 20% of characters are garbled, consider the text unreadable
+	return float64(garbled)/float64(total) > 0.20
 }
