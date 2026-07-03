@@ -6,6 +6,7 @@ import (
 	"archive/zip"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -34,8 +35,9 @@ func createTestXlsx(t *testing.T, dir string) string {
 	zw := zip.NewWriter(f)
 	w1, _ := zw.Create("xl/sharedStrings.xml")
 	w1.Write([]byte(`<?xml version="1.0"?><sst><si><t>Foo</t></si><si><t>Bar</t></si></sst>`))
+	// Contains shared string cells (<t>) and numeric cells (<v>)
 	w2, _ := zw.Create("xl/worksheets/sheet1.xml")
-	w2.Write([]byte(`<?xml version="1.0"?><worksheet><sheetData><row><c><v>1</v></c></row></sheetData></worksheet>`))
+	w2.Write([]byte(`<?xml version="1.0"?><worksheet><sheetData><row><c><t>Foo</t></c><c t="n"><v>42</v></c></row></sheetData></worksheet>`))
 	zw.Close()
 	f.Close()
 	return path
@@ -64,8 +66,30 @@ func createTestEpub(t *testing.T, dir string) string {
 		t.Fatal(err)
 	}
 	zw := zip.NewWriter(f)
-	w, _ := zw.Create("chapter1.xhtml")
-	w.Write([]byte(`<?xml version="1.0"?><html><body><p><t>Chapter Content</t></p></body></html>`))
+
+	// container.xml points to OPF file
+	cw, _ := zw.Create("META-INF/container.xml")
+	cw.Write([]byte(`<?xml version="1.0"?><container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`))
+
+	// content.opf defines manifest and spine (note: spine order is ch2→ch1, intentionally reversed to test sorting)
+	ow, _ := zw.Create("OEBPS/content.opf")
+	ow.Write([]byte(`<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0">
+  <manifest>
+    <item id="ch1" href="chapter1.xhtml" media-type="application/xhtml+xml"/>
+    <item id="ch2" href="chapter2.xhtml" media-type="application/xhtml+xml"/>
+  </manifest>
+  <spine>
+    <itemref idref="ch2"/>
+    <itemref idref="ch1"/>
+  </spine>
+</package>`))
+
+	// 两个章节内容
+	w1, _ := zw.Create("OEBPS/chapter1.xhtml")
+	w1.Write([]byte(`<?xml version="1.0"?><html><body><p><t>First Chapter</t></p></body></html>`))
+	w2, _ := zw.Create("OEBPS/chapter2.xhtml")
+	w2.Write([]byte(`<?xml version="1.0"?><html><body><p><t>Second Chapter</t></p></body></html>`))
+
 	zw.Close()
 	f.Close()
 	return path
@@ -96,6 +120,14 @@ func TestXlsxParser_Extract(t *testing.T) {
 	if result == "" {
 		t.Error("expected non-empty result")
 	}
+	// 验证共享字符串（<t>）被提取
+	if !strings.Contains(result, "Foo") {
+		t.Errorf("expected 'Foo' in result, got: %q", result)
+	}
+	// Verify numeric cell values (<v>) are also extracted
+	if !strings.Contains(result, "42") {
+		t.Errorf("expected '42' (numeric cell) in result, got: %q", result)
+	}
 	t.Logf("XLSX extracted: %q", result)
 }
 
@@ -123,6 +155,15 @@ func TestEpubParser_Extract(t *testing.T) {
 	}
 	if result == "" {
 		t.Error("expected non-empty result")
+	}
+	// Verify spine order: ch2 comes before ch1
+	idx2 := strings.Index(result, "Second Chapter")
+	idx1 := strings.Index(result, "First Chapter")
+	if idx2 == -1 || idx1 == -1 {
+		t.Fatalf("expected both chapters in output, got: %q", result)
+	}
+	if idx2 > idx1 {
+		t.Errorf("spine order violated: 'Second Chapter' (idx=%d) should come before 'First Chapter' (idx=%d)\nresult: %q", idx2, idx1, result)
 	}
 	t.Logf("EPUB extracted: %q", result)
 }

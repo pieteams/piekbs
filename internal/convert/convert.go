@@ -84,7 +84,7 @@ func ConvertFile(registry *Registry, srcPath, destPath string) bool {
 		return false
 	}
 
-	// 嵌入式 Excel 处理：DOCX/PPTX 中可能嵌入 XLSX
+	// Embedded Excel handling: DOCX/PPTX may contain embedded XLSX
 	if ext == ".docx" || ext == ".pptx" {
 		text = injectEmbeddedXlsx(registry, srcPath, text)
 	}

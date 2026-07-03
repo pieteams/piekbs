@@ -5,6 +5,7 @@ package convert
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -28,6 +29,14 @@ func TestHTMLParser_Extract(t *testing.T) {
 	if result == "" {
 		t.Error("expected non-empty result")
 	}
+	// 验证 h1 转换为 Markdown 标题
+	if !strings.Contains(result, "# Title") {
+		t.Errorf("expected '# Title' in output, got: %q", result)
+	}
+	// 验证文本内容
+	if !strings.Contains(result, "Hello") {
+		t.Errorf("expected 'Hello' in output, got: %q", result)
+	}
 	t.Logf("HTML extracted: %q", result)
 }
 
@@ -42,6 +51,16 @@ func TestCSVParser_Extract(t *testing.T) {
 	}
 	if result == "" {
 		t.Error("expected non-empty result")
+	}
+	// 验证 Markdown 表格格式
+	if !strings.Contains(result, "| name | age |") {
+		t.Errorf("expected '| name | age |' in output, got: %q", result)
+	}
+	if !strings.Contains(result, "|---|") {
+		t.Errorf("expected '|---|' in output, got: %q", result)
+	}
+	if !strings.Contains(result, "Alice") {
+		t.Errorf("expected 'Alice' in output, got: %q", result)
 	}
 	t.Logf("CSV extracted: %q", result)
 }

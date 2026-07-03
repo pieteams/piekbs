@@ -31,6 +31,23 @@ func (p *HTMLParser) Extract(path string) (string, error) {
 		if n.Type == html.ElementNode && (n.Data == "script" || n.Data == "style") {
 			return
 		}
+		// h1-h6: 进入时写 Markdown 前缀
+		if n.Type == html.ElementNode {
+			switch n.Data {
+			case "h1":
+				text.WriteString("# ")
+			case "h2":
+				text.WriteString("## ")
+			case "h3":
+				text.WriteString("### ")
+			case "h4":
+				text.WriteString("#### ")
+			case "h5":
+				text.WriteString("##### ")
+			case "h6":
+				text.WriteString("###### ")
+			}
+		}
 		if n.Type == html.TextNode {
 			text.WriteString(n.Data)
 		}
