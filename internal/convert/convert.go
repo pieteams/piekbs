@@ -13,8 +13,8 @@ import (
 	"strings"
 )
 
-// imgPlaceholderRe matches base64-encoded image placeholders produced by
-// markitdown for embedded OLE objects (e.g. embedded Excel sheets inside docx/pptx).
+// imgPlaceholderRe matches base64-encoded image placeholders in converted
+// documents (e.g. embedded Excel sheets inside docx/pptx).
 var imgPlaceholderRe = regexp.MustCompile(`!\[.*?\]\(data:image/[^)]+\)`)
 
 // FindConvertibleFiles walks the raw/ directory under kbRoot and returns

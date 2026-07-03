@@ -89,9 +89,9 @@ func findBinary() (string, error) {
 }
 
 // servicePath returns a PATH for the installed daemon. launchd/systemd start
-// with a minimal PATH, so external converters (markitdown, pandoc) installed in
-// Homebrew or user dirs would not be found. We propagate the current PATH and
-// append common install locations as a fallback.
+// with a minimal PATH, so tools installed in Homebrew or user dirs would not
+// be found. We propagate the current PATH and append common install locations
+// as a fallback.
 func servicePath() string {
 	seen := map[string]bool{}
 	var dirs []string
