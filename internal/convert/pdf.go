@@ -3,7 +3,9 @@
 package convert
 
 import (
+	"bytes"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/ledongthuc/pdf"
@@ -15,7 +17,15 @@ type PDFParser struct{}
 func (p *PDFParser) Extensions() []string { return []string{".pdf"} }
 
 func (p *PDFParser) Extract(path string) (string, error) {
-	f, r, err := pdf.Open(path)
+	// Preprocess: ledongthuc/pdf rejects valid PDFs with a space after the
+	// version number (e.g. "%PDF-1.5 \r"). Fix the header if needed.
+	actualPath, cleanup, err := fixPDFHeader(path)
+	if err != nil {
+		return "", fmt.Errorf("extract pdf: %w", err)
+	}
+	defer cleanup()
+
+	f, r, err := pdf.Open(actualPath)
 	if err != nil {
 		return "", fmt.Errorf("extract pdf: %w", err)
 	}
@@ -38,4 +48,36 @@ func (p *PDFParser) Extract(path string) (string, error) {
 		return "", fmt.Errorf("extract pdf: no text content in %s", path)
 	}
 	return result, nil
+}
+
+// fixPDFHeader checks if a PDF has a space between the version number and the
+// line ending (e.g. "%PDF-1.5 \r") and writes a fixed copy to a temp file.
+// Returns the path to use and a cleanup function.
+func fixPDFHeader(path string) (string, func(), error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", func() {}, err
+	}
+
+	// Check if header needs fixing: %PDF-1.X followed by space then \r or \n
+	if len(data) >= 10 && bytes.HasPrefix(data, []byte("%PDF-1.")) && data[8] == ' ' && (data[9] == '\r' || data[9] == '\n') {
+		// Remove the extra space
+		fixed := make([]byte, len(data)-1)
+		copy(fixed, data[:8])
+		copy(fixed[8:], data[9:])
+		tmp, err := os.CreateTemp("", "pdf-fix-*.pdf")
+		if err != nil {
+			return "", func() {}, err
+		}
+		if _, err := tmp.Write(fixed); err != nil {
+			tmp.Close()
+			os.Remove(tmp.Name())
+			return "", func() {}, err
+		}
+		tmp.Close()
+		return tmp.Name(), func() { os.Remove(tmp.Name()) }, nil
+	}
+
+	// No fix needed
+	return path, func() {}, nil
 }

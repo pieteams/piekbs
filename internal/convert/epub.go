@@ -4,10 +4,14 @@ package convert
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/net/html"
 )
 
 // EpubParser extracts text from .epub files (ZIP containing XHTML chapters).
@@ -45,7 +49,7 @@ func (p *EpubParser) Extract(path string) (string, error) {
 		if err != nil {
 			continue
 		}
-		content := extractXMLText(frc)
+		content := extractHTMLText(frc)
 		frc.Close()
 		if content != "" {
 			chapterNum++
@@ -176,4 +180,38 @@ func epubFallbackOrder(r *zip.ReadCloser) []string {
 		}
 	}
 	return result
+}
+
+// extractHTMLText reads an HTML document from r and returns plain text content.
+// Script and style elements are skipped. Block-level elements produce newlines.
+func extractHTMLText(r io.Reader) string {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return ""
+	}
+	doc, err := html.Parse(bytes.NewReader(data))
+	if err != nil {
+		return ""
+	}
+	var text strings.Builder
+	var traverse func(*html.Node)
+	traverse = func(n *html.Node) {
+		if n.Type == html.ElementNode && (n.Data == "script" || n.Data == "style") {
+			return
+		}
+		if n.Type == html.TextNode {
+			text.WriteString(n.Data)
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			traverse(c)
+		}
+		if n.Type == html.ElementNode {
+			switch n.Data {
+			case "p", "div", "br", "h1", "h2", "h3", "h4", "h5", "h6", "li", "tr":
+				text.WriteString("\n")
+			}
+		}
+	}
+	traverse(doc)
+	return strings.TrimSpace(text.String())
 }
