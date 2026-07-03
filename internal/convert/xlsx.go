@@ -206,12 +206,11 @@ func colIndex(ref string) int {
 	return col - 1 // 0-based
 }
 
-// sheetToMarkdown converts parsed rows to a Markdown table.
+// sheetToMarkdown converts parsed XLSX rows to a Markdown table.
 func sheetToMarkdown(rows []row) string {
 	if len(rows) == 0 {
 		return ""
 	}
-
 	// Find max columns
 	maxCol := 0
 	for _, r := range rows {
@@ -221,8 +220,7 @@ func sheetToMarkdown(rows []row) string {
 			}
 		}
 	}
-
-	// Build grid
+	// Build grid from sparse cell representation
 	grid := make([][]string, len(rows))
 	for i := range grid {
 		grid[i] = make([]string, maxCol)
@@ -234,64 +232,5 @@ func sheetToMarkdown(rows []row) string {
 			}
 		}
 	}
-
-	// Trim trailing empty rows
-	for len(grid) > 0 {
-		last := grid[len(grid)-1]
-		empty := true
-		for _, v := range last {
-			if v != "" {
-				empty = false
-				break
-			}
-		}
-		if !empty {
-			break
-		}
-		grid = grid[:len(grid)-1]
-	}
-
-	if len(grid) == 0 {
-		return ""
-	}
-
-	// Calculate column widths for alignment
-	widths := make([]int, maxCol)
-	for _, r := range grid {
-		for j, v := range r {
-			if len(v) > widths[j] {
-				widths[j] = len(v)
-			}
-		}
-	}
-
-	var sb strings.Builder
-	// Header row
-	sb.WriteString("|")
-	for j, v := range grid[0] {
-		sb.WriteString(" " + padRight(v, widths[j]) + " |")
-	}
-	sb.WriteString("\n")
-	// Separator row
-	sb.WriteString("|")
-	for j := range grid[0] {
-		sb.WriteString(strings.Repeat("-", widths[j]+2) + "|")
-	}
-	sb.WriteString("\n")
-	// Data rows
-	for i := 1; i < len(grid); i++ {
-		sb.WriteString("|")
-		for j, v := range grid[i] {
-			sb.WriteString(" " + padRight(v, widths[j]) + " |")
-		}
-		sb.WriteString("\n")
-	}
-	return sb.String()
-}
-
-func padRight(s string, width int) string {
-	if len(s) >= width {
-		return s
-	}
-	return s + strings.Repeat(" ", width-len(s))
+	return gridToMarkdown(grid)
 }

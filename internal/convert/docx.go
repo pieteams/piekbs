@@ -94,7 +94,7 @@ func extractDocxText(r interface{ Read([]byte) (int, error) }) string {
 			case "tbl":
 				if inTable && len(rows) > 0 {
 					text.WriteString("\n")
-					text.WriteString(docxTableToMarkdown(rows))
+					text.WriteString(gridToMarkdown(rows))
 					text.WriteString("\n")
 				}
 				inTable = false
@@ -105,59 +105,3 @@ func extractDocxText(r interface{ Read([]byte) (int, error) }) string {
 	return strings.TrimSpace(text.String())
 }
 
-// docxTableToMarkdown converts a 2D slice of cell values to a Markdown table.
-func docxTableToMarkdown(rows [][]string) string {
-	if len(rows) == 0 {
-		return ""
-	}
-	// Find max columns
-	maxCol := 0
-	for _, r := range rows {
-		if len(r) > maxCol {
-			maxCol = len(r)
-		}
-	}
-	// Normalize rows to same column count
-	grid := make([][]string, len(rows))
-	for i, r := range rows {
-		grid[i] = make([]string, maxCol)
-		copy(grid[i], r)
-	}
-	// Calculate column widths
-	widths := make([]int, maxCol)
-	for _, r := range grid {
-		for j, v := range r {
-			if len(v) > widths[j] {
-				widths[j] = len(v)
-			}
-		}
-	}
-	// Ensure minimum width
-	for j := range widths {
-		if widths[j] < 3 {
-			widths[j] = 3
-		}
-	}
-	var sb strings.Builder
-	// Header row
-	sb.WriteString("|")
-	for j, v := range grid[0] {
-		sb.WriteString(" " + padRight(v, widths[j]) + " |")
-	}
-	sb.WriteString("\n")
-	// Separator
-	sb.WriteString("|")
-	for j := range grid[0] {
-		sb.WriteString(strings.Repeat("-", widths[j]+2) + "|")
-	}
-	sb.WriteString("\n")
-	// Data rows
-	for i := 1; i < len(grid); i++ {
-		sb.WriteString("|")
-		for j, v := range grid[i] {
-			sb.WriteString(" " + padRight(v, widths[j]) + " |")
-		}
-		sb.WriteString("\n")
-	}
-	return sb.String()
-}
