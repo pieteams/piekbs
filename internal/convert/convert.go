@@ -125,6 +125,12 @@ func Run(kbRoot string) (int, error) {
 // injectEmbeddedXlsx extracts embedded .xlsx files from a docx/pptx (which are zip
 // archives) and converts each one using the registry. The resulting text
 // replaces the first image placeholder in the converted markdown content.
+//
+// NOTE: With the current pure Go parsers, this function is effectively a no-op
+// because DocxParser/PptxParser use extractXMLText which does not generate
+// base64 image placeholders. The placeholder pattern only appeared when using
+// markitdown. This function is retained for forward compatibility — if a future
+// parser produces image placeholders for embedded objects, it will work.
 func injectEmbeddedXlsx(registry *Registry, srcPath string, md string) string {
 	zr, err := zip.OpenReader(srcPath)
 	if err != nil {
