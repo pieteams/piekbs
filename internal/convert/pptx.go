@@ -4,7 +4,10 @@ package convert
 
 import (
 	"archive/zip"
+	"encoding/xml"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -19,22 +22,203 @@ func (p *PptxParser) Extract(path string) (string, error) {
 		return "", fmt.Errorf("extract pptx: %w", err)
 	}
 	defer r.Close()
+
+	// 1. Build rId → embedded file path map from slide relationships
+	relsMap := parsePptxRels(r)
+
+	// 2. Pre-extract embedded Excel files
+	embedCache := extractPptxEmbeds(r, relsMap)
+
+	// 3. Extract slide text with table awareness and embedded content
 	var text strings.Builder
 	slideNum := 0
 	for _, f := range r.File {
-		if strings.HasPrefix(f.Name, "ppt/slides/slide") && strings.HasSuffix(f.Name, ".xml") {
+		if !strings.HasPrefix(f.Name, "ppt/slides/slide") || !strings.HasSuffix(f.Name, ".xml") {
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			continue
+		}
+		content := extractPptxSlide(rc, relsMap, embedCache)
+		rc.Close()
+		if content != "" {
+			slideNum++
+			text.WriteString(fmt.Sprintf("\n--- Slide %d ---\n", slideNum))
+			text.WriteString(content)
+		}
+	}
+	return strings.TrimSpace(text.String()), nil
+}
+
+// parsePptxRels parses all ppt/slides/_rels/slide*.xml.rels and returns rId → target path map.
+func parsePptxRels(r *zip.ReadCloser) map[string]string {
+	result := make(map[string]string)
+	for _, f := range r.File {
+		if !strings.HasPrefix(f.Name, "ppt/slides/_rels/slide") || !strings.HasSuffix(f.Name, ".xml.rels") {
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			continue
+		}
+		decoder := xml.NewDecoder(rc)
+		for {
+			tok, err := decoder.Token()
+			if err != nil {
+				break
+			}
+			if se, ok := tok.(xml.StartElement); ok && se.Name.Local == "Relationship" {
+				var id, target, relType string
+				for _, attr := range se.Attr {
+					switch attr.Name.Local {
+					case "Id":
+						id = attr.Value
+					case "Target":
+						target = attr.Value
+					case "Type":
+						relType = attr.Value
+					}
+				}
+				if id != "" && target != "" && strings.Contains(relType, "package") {
+					// Resolve relative path: base is the slide directory, not _rels directory
+					// ppt/slides/_rels/slide165.xml.rels → ppt/slides/ (owner directory)
+					relDir := filepath.Dir(filepath.Dir(f.Name)) // go up from _rels to slide dir
+					resolved := filepath.Join(relDir, target)
+					resolved = filepath.Clean(resolved) // normalize ../
+					result[id] = resolved
+				}
+			}
+		}
+		rc.Close()
+	}
+	return result
+}
+
+// extractPptxEmbeds pre-extracts embedded Excel files and returns a cache of path → text.
+func extractPptxEmbeds(r *zip.ReadCloser, relsMap map[string]string) map[string]string {
+	cache := make(map[string]string)
+	seen := make(map[string]bool)
+	for _, target := range relsMap {
+		if seen[target] {
+			continue
+		}
+		seen[target] = true
+		if !strings.HasSuffix(strings.ToLower(target), ".xlsx") {
+			continue
+		}
+		for _, f := range r.File {
+			if f.Name != target {
+				continue
+			}
 			rc, err := f.Open()
 			if err != nil {
 				continue
 			}
-			content := extractXMLText(rc)
+			tmp, err := os.CreateTemp("", "pptx-embed-*.xlsx")
+			if err != nil {
+				rc.Close()
+				continue
+			}
+			if _, err := tmp.ReadFrom(rc); err != nil {
+				rc.Close()
+				tmp.Close()
+				os.Remove(tmp.Name())
+				continue
+			}
 			rc.Close()
-			if content != "" {
-				slideNum++
-				text.WriteString(fmt.Sprintf("\n--- Slide %d ---\n", slideNum))
-				text.WriteString(content)
+			tmp.Close()
+
+			xlsxParser := &XlsxParser{}
+			xlText, err := xlsxParser.Extract(tmp.Name())
+			os.Remove(tmp.Name())
+			if err == nil && xlText != "" {
+				cache[target] = xlText
+			}
+			// Note: OLE2 Excel files (Excel 97-2003) are not supported
+			// Only modern XLSX (ZIP-based) can be extracted
+		}
+	}
+	return cache
+}
+
+// extractPptxSlide parses a slide XML with table awareness and embedded content support.
+// Uses the same table-aware approach as DOCX: <a:tbl> → <a:tr> → <a:tc> → <a:t>.
+func extractPptxSlide(r interface{ Read([]byte) (int, error) }, relsMap map[string]string, embedCache map[string]string) string {
+	decoder := xml.NewDecoder(r)
+	var text strings.Builder
+	var inT bool
+	var inTable bool
+	var currentRow []string
+	var currentCell strings.Builder
+	var rows [][]string
+
+	for {
+		tok, err := decoder.Token()
+		if err != nil {
+			break
+		}
+		switch t := tok.(type) {
+		case xml.StartElement:
+			switch t.Name.Local {
+			case "tbl":
+				inTable = true
+				rows = nil
+			case "tr":
+				currentRow = nil
+			case "tc":
+				currentCell.Reset()
+			case "t":
+				inT = true
+			case "p":
+				if !inTable {
+					text.WriteString("\n")
+				}
+			case "br":
+				if !inTable {
+					text.WriteString("\n")
+				}
+			case "oleObj":
+				for _, attr := range t.Attr {
+					if attr.Name.Local == "id" {
+						if targetPath, ok := relsMap[attr.Value]; ok {
+							if embedText, ok := embedCache[targetPath]; ok {
+								text.WriteString("\n\n" + embedText + "\n\n")
+							}
+						}
+					}
+				}
+			}
+		case xml.CharData:
+			if inT {
+				if inTable {
+					currentCell.Write(t)
+				} else {
+					text.Write(t)
+				}
+			}
+		case xml.EndElement:
+			switch t.Name.Local {
+			case "t":
+				inT = false
+			case "tc":
+				if inTable {
+					currentRow = append(currentRow, strings.TrimSpace(currentCell.String()))
+				}
+			case "tr":
+				if inTable && len(currentRow) > 0 {
+					rows = append(rows, currentRow)
+				}
+			case "tbl":
+				if inTable && len(rows) > 0 {
+					text.WriteString("\n")
+					text.WriteString(gridToMarkdown(rows))
+					text.WriteString("\n")
+				}
+				inTable = false
+				rows = nil
 			}
 		}
 	}
-	return strings.TrimSpace(text.String()), nil
+	return strings.TrimSpace(text.String())
 }
