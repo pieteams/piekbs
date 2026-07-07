@@ -524,10 +524,10 @@ func catchUpFn(kbRoot string, since time.Time, cfg *config.Config) {
 	log.Printf("catch-up: %d files indexed", n)
 
 	if cfg.Distill.BaseURL != "" && cfg.Distill.Token != "" && cfg.Distill.Model != "" {
-		if n, err := distill.Enqueue(db, kbRoot); err != nil {
-			log.Printf("catch-up enqueue: %v", err)
-		} else if n > 0 {
-			log.Printf("catch-up enqueue: %d file(s) queued for distillation", n)
+		if eq, eqErr := distill.Enqueue(db, kbRoot); eqErr != nil {
+			log.Printf("catch-up enqueue: %v", eqErr)
+		} else if eq > 0 {
+			log.Printf("catch-up enqueue: %d file(s) queued for distillation", eq)
 		}
 	}
 }
@@ -562,10 +562,10 @@ func reindexFn(kbRoot string) {
 	}
 	// 3. Enqueue new raw files for distillation (workers process asynchronously).
 	if cfg.Distill.IsConfigured() {
-		if n, err := distill.Enqueue(db, kbRoot); err != nil {
-			log.Printf("watcher enqueue: %v", err)
-		} else if n > 0 {
-			log.Printf("watcher enqueue: %d file(s) queued", n)
+		if eq, eqErr := distill.Enqueue(db, kbRoot); eqErr != nil {
+			log.Printf("watcher enqueue: %v", eqErr)
+		} else if eq > 0 {
+			log.Printf("watcher enqueue: %d file(s) queued", eq)
 		}
 	}
 }

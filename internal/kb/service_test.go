@@ -61,6 +61,7 @@ func TestAppendQueryLogWithExtra(t *testing.T) {
 
 func TestKBStatus(t *testing.T) {
 	dir := t.TempDir()
+	t.Cleanup(CloseGlobalDB)
 	os.MkdirAll(filepath.Join(dir, "wiki"), 0o755)
 	// OpenDB creates the DB
 	db, err := OpenDB(dir)
@@ -118,6 +119,7 @@ func TestKBSearch(t *testing.T) {
 
 func TestKBPageEmptyIDs(t *testing.T) {
 	dir := t.TempDir()
+	t.Cleanup(CloseGlobalDB)
 	os.MkdirAll(filepath.Join(dir, "wiki"), 0o755)
 	OpenDB(dir) // init DB
 
@@ -173,6 +175,7 @@ func TestKBAddFileExists(t *testing.T) {
 
 func TestKBUpload(t *testing.T) {
 	dir := t.TempDir()
+	t.Cleanup(CloseGlobalDB)
 	os.MkdirAll(filepath.Join(dir, "raw"), 0o755)
 	os.MkdirAll(filepath.Join(dir, "wiki"), 0o755)
 	db, _ := OpenDB(dir)

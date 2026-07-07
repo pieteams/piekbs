@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -47,7 +48,9 @@ func CloseGlobalDB() {
 	globalDBMu.Lock()
 	defer globalDBMu.Unlock()
 	if globalDB != nil {
-		globalDB.Close()
+		if err := globalDB.Close(); err != nil {
+			log.Printf("close global db: %v", err)
+		}
 		globalDB = nil
 	}
 }
