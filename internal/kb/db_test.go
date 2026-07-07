@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -165,5 +166,72 @@ func TestContentHash(t *testing.T) {
 	}
 	if len(h1) != 16 {
 		t.Errorf("hash length = %d, want 16", len(h1))
+	}
+}
+
+func TestGlobalDB(t *testing.T) {
+	dir := t.TempDir()
+	t.Cleanup(CloseGlobalDB)
+
+	db1, err := GlobalDB(dir)
+	if err != nil {
+		t.Fatalf("GlobalDB failed: %v", err)
+	}
+
+	// 第二次调用返回同一个实例
+	db2, err := GlobalDB(dir)
+	if err != nil {
+		t.Fatalf("GlobalDB failed: %v", err)
+	}
+	if db1 != db2 {
+		t.Error("GlobalDB returned different instances")
+	}
+}
+
+func TestGlobalDB_CloseAndReopen(t *testing.T) {
+	dir := t.TempDir()
+	t.Cleanup(CloseGlobalDB)
+
+	db1, err := GlobalDB(dir)
+	if err != nil {
+		t.Fatalf("GlobalDB failed: %v", err)
+	}
+	CloseGlobalDB()
+
+	// 关闭后重新打开
+	db2, err := GlobalDB(dir)
+	if err != nil {
+		t.Fatalf("GlobalDB failed after Close: %v", err)
+	}
+	if db1 == db2 {
+		t.Error("GlobalDB should return new instance after Close")
+	}
+}
+
+func TestGlobalDB_Concurrent(t *testing.T) {
+	dir := t.TempDir()
+	t.Cleanup(CloseGlobalDB)
+
+	var wg sync.WaitGroup
+	errs := make(chan error, 10)
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			db, err := GlobalDB(dir)
+			if err != nil {
+				errs <- err
+				return
+			}
+			if _, err := db.Exec("SELECT 1"); err != nil {
+				errs <- err
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		t.Errorf("concurrent GlobalDB failed: %v", err)
 	}
 }

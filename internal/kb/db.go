@@ -8,11 +8,54 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	_ "modernc.org/sqlite"
 )
 
+var (
+	globalDB   *sql.DB
+	globalDBMu sync.Mutex
+)
+
+// GlobalDB returns the global database singleton.
+// It opens the database on first call and returns the same instance thereafter.
+// Unlike sync.Once, a failed open does not permanently cache the error —
+// subsequent calls will retry, which lets distill workers recover from
+// transient lock contention.
+//
+// Precondition: single-process, single kbRoot. If called with different kbRoot
+// values, the first one wins silently.
+func GlobalDB(kbRoot string) (*sql.DB, error) {
+	globalDBMu.Lock()
+	defer globalDBMu.Unlock()
+	if globalDB != nil {
+		return globalDB, nil
+	}
+	db, err := OpenDB(kbRoot)
+	if err != nil {
+		return nil, err // 不缓存错误，下次可重试
+	}
+	globalDB = db
+	return globalDB, nil
+}
+
+// CloseGlobalDB closes the global database connection and resets the singleton.
+// Should be called on process exit (especially in signal handlers that use os.Exit)
+// to ensure WAL files are cleaned up.
+func CloseGlobalDB() {
+	globalDBMu.Lock()
+	defer globalDBMu.Unlock()
+	if globalDB != nil {
+		globalDB.Close()
+		globalDB = nil
+	}
+}
+
 // OpenDB opens (or creates) kb.sqlite under kbRoot/index/.
+//
+// Deprecated: use GlobalDB for new code. OpenDB is retained only for tests
+// that need isolated database instances.
 func OpenDB(kbRoot string) (*sql.DB, error) {
 	indexDir := filepath.Join(kbRoot, "index")
 	if err := os.MkdirAll(indexDir, 0o755); err != nil {
