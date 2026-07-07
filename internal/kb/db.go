@@ -67,7 +67,7 @@ func OpenDB(kbRoot string) (*sql.DB, error) {
 
 	dbPath := filepath.Join(indexDir, "kb.sqlite")
 
-	db, err := sql.Open("sqlite", dbPath+"?_journal_mode=WAL")
+	db, err := sql.Open("sqlite", dbPath+"?_journal_mode=WAL&_busy_timeout=5000")
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
