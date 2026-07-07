@@ -95,6 +95,7 @@ func TestKBStatus(t *testing.T) {
 
 func TestKBSearch(t *testing.T) {
 	dir := t.TempDir()
+	t.Cleanup(CloseGlobalDB)
 	os.MkdirAll(filepath.Join(dir, "wiki"), 0o755)
 	db, err := OpenDB(dir)
 	if err != nil {
@@ -129,6 +130,7 @@ func TestKBPageEmptyIDs(t *testing.T) {
 
 func TestKBAdd(t *testing.T) {
 	dir := t.TempDir()
+	t.Cleanup(CloseGlobalDB)
 	os.MkdirAll(filepath.Join(dir, "wiki"), 0o755)
 	db, _ := OpenDB(dir)
 	db.Close()
@@ -187,6 +189,7 @@ func TestKBUpload(t *testing.T) {
 
 func TestKBReindex(t *testing.T) {
 	dir := t.TempDir()
+	t.Cleanup(CloseGlobalDB)
 	os.MkdirAll(filepath.Join(dir, "raw"), 0o755)
 	os.MkdirAll(filepath.Join(dir, "wiki"), 0o755)
 	db, _ := OpenDB(dir)
@@ -203,6 +206,7 @@ func TestKBReindex(t *testing.T) {
 
 func TestKBLint(t *testing.T) {
 	dir := t.TempDir()
+	t.Cleanup(CloseGlobalDB)
 	result, err := KBLint(dir)
 	if err != nil {
 		t.Fatalf("KBLint: %v", err)
@@ -219,6 +223,7 @@ func TestKBLint(t *testing.T) {
 // the links table and writes red_links.json with concept-name gaps.
 func TestKBLint_CleansBrokenLinks(t *testing.T) {
 	dir := setupTestKB(t)
+	t.Cleanup(CloseGlobalDB)
 	db, err := OpenDB(dir)
 	if err != nil {
 		t.Fatal(err)

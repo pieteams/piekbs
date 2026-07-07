@@ -87,11 +87,10 @@ func distillQueueStats(db *sql.DB) (map[string]int, error) {
 func KBStatus(kbRoot string) (*StatusResult, error) {
 	AppendQueryLog(kbRoot, "kb_status", "")
 	dbPath := filepath.Join(kbRoot, "index", "kb.sqlite")
-	db, err := OpenDB(kbRoot)
+	db, err := GlobalDB(kbRoot)
 	if err != nil {
 		return nil, &KBError{Code: 500, Message: err.Error()}
 	}
-	defer db.Close()
 
 	byLayer, total, _ := LayerCounts(db)
 	byKind, _ := KindCounts(db)
@@ -114,11 +113,10 @@ func KBStatus(kbRoot string) (*StatusResult, error) {
 
 // KBSearch runs layered FTS search and returns results with related docs.
 func KBSearch(kbRoot, query string, layer, kind *string, sourceLimit, synthLimit int) (*SearchResponse, error) {
-	db, err := OpenDB(kbRoot)
+	db, err := GlobalDB(kbRoot)
 	if err != nil {
 		return nil, &KBError{Code: 500, Message: err.Error()}
 	}
-	defer db.Close()
 
 	results, conflicts, err := SearchLayered(db, kbRoot, query, layer, kind, sourceLimit, synthLimit)
 	if err != nil {
@@ -161,11 +159,10 @@ func KBPage(kbRoot string, ids []string, full bool) ([]PageResult, error) {
 		ids = ids[:5]
 	}
 	AppendQueryLog(kbRoot, "kb_page", strings.Join(ids, ","))
-	db, err := OpenDB(kbRoot)
+	db, err := GlobalDB(kbRoot)
 	if err != nil {
 		return nil, &KBError{Code: 500, Message: err.Error()}
 	}
-	defer db.Close()
 
 	pages, err := FetchPages(db, kbRoot, ids, full)
 	if err != nil {
@@ -224,11 +221,10 @@ func KBAdd(kbRoot, filename, content, sourceURL string, overwrite bool) (*AddRes
 		return nil, &KBError{Code: 500, Message: "write failed: " + err.Error()}
 	}
 
-	db, err := OpenDB(kbRoot)
+	db, err := GlobalDB(kbRoot)
 	if err != nil {
 		return &AddResult{Path: "raw/" + filename, Indexed: false, IndexError: err.Error()}, nil
 	}
-	defer db.Close()
 	if _, err := IndexFiles(db, kbRoot); err != nil {
 		return &AddResult{Path: "raw/" + filename, Indexed: false, IndexError: err.Error()}, nil
 	}
@@ -265,11 +261,10 @@ func KBUpload(kbRoot, filename string, r io.Reader) error {
 // KBReindex walks kbRoot and re-indexes documents.
 func KBReindex(kbRoot string, full bool) (*ReindexResult, error) {
 	AppendQueryLog(kbRoot, "kb_reindex", "")
-	db, err := OpenDB(kbRoot)
+	db, err := GlobalDB(kbRoot)
 	if err != nil {
 		return nil, &KBError{Code: 500, Message: err.Error()}
 	}
-	defer db.Close()
 
 	indexFn := IndexFiles
 	if full {
@@ -298,12 +293,11 @@ func KBLint(kbRoot string) (*LintResult, error) {
 	}
 
 	// Broken-link cleanup (requires DB).
-	db, err := OpenDB(kbRoot)
+	db, err := GlobalDB(kbRoot)
 	if err != nil {
 		// Non-fatal: return file warnings even if DB unavailable.
 		return &LintResult{Warnings: warnings, Count: len(warnings)}, nil
 	}
-	defer db.Close()
 
 	redLinks, blWarnings, brokenPaths, placeholders, err := cleanBrokenLinks(db)
 	if err != nil {
