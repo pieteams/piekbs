@@ -35,7 +35,7 @@ func workerLoop(ctx context.Context, cfg Config, kbRoot string, fn distillFunc) 
 		default:
 		}
 
-		db, err := kb.OpenDB(kbRoot)
+		db, err := kb.GlobalDB(kbRoot)
 		if err != nil {
 			log.Printf("distill worker: open db: %v", err)
 			sleep(ctx, 5*time.Second)
@@ -45,13 +45,11 @@ func workerLoop(ctx context.Context, cfg Config, kbRoot string, fn distillFunc) 
 		path, err := NextPending(db)
 		if err != nil {
 			log.Printf("distill worker: next pending: %v", err)
-			db.Close()
 			sleep(ctx, 5*time.Second)
 			continue
 		}
 
 		if path == "" {
-			db.Close()
 			sleep(ctx, 5*time.Second)
 			continue
 		}
@@ -65,7 +63,6 @@ func workerLoop(ctx context.Context, cfg Config, kbRoot string, fn distillFunc) 
 			var retryCount int
 			db.QueryRow("SELECT retry_count FROM distill_queue WHERE path=?", path).Scan(&retryCount) //nolint:errcheck
 			MarkFailed(db, path, distillErr.Error())                                                  //nolint:errcheck
-			db.Close()
 			// 指数退避：10s, 20s, 40s, 80s, 160s
 			backoff := time.Duration(math.Pow(2, float64(retryCount))) * 10 * time.Second
 			sleep(ctx, backoff)
@@ -79,7 +76,6 @@ func workerLoop(ctx context.Context, cfg Config, kbRoot string, fn distillFunc) 
 		if _, err := kb.IndexFiles(db, kbRoot); err != nil {
 			log.Printf("distill worker: post-distill reindex: %v", err)
 		}
-		db.Close()
 	}
 }
 
