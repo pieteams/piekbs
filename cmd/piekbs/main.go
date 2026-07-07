@@ -304,10 +304,16 @@ func runStdio(kbRoot string) error {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigCh
+		kb.CloseGlobalDB()
 		writeTimestamp(filepath.Join(kbRoot, lastShutdownFile))
 		_ = os.Remove(filepath.Join(kbRoot, runningFile))
 		os.Exit(0)
 	}()
+
+	// 初始化全局数据库单例
+	if _, err := kb.GlobalDB(kbRoot); err != nil {
+		return fmt.Errorf("initialize database: %w", err)
+	}
 
 	if !since.IsZero() {
 		go func() { catchUpFn(kbRoot, since, cfg) }()
@@ -320,9 +326,8 @@ func runStdio(kbRoot string) error {
 	}()
 
 	// Recover stale processing tasks from previous crash.
-	if db, err := kb.OpenDB(kbRoot); err == nil {
+	if db, err := kb.GlobalDB(kbRoot); err == nil {
 		_ = distill.RecoverStale(db)
-		db.Close()
 	}
 
 	// Start distill worker pool.
@@ -385,10 +390,16 @@ func runServe(kbRoot string) error {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigCh
+		kb.CloseGlobalDB()
 		writeTimestamp(filepath.Join(kbRoot, lastShutdownFile))
 		_ = os.Remove(filepath.Join(kbRoot, runningFile))
 		os.Exit(0)
 	}()
+
+	// 初始化全局数据库单例
+	if _, err := kb.GlobalDB(kbRoot); err != nil {
+		return fmt.Errorf("initialize database: %w", err)
+	}
 
 	// Catch-up: index + distill only files newer than last known time.
 	if !since.IsZero() {
@@ -405,9 +416,8 @@ func runServe(kbRoot string) error {
 	}()
 
 	// Recover stale processing tasks from previous crash.
-	if db, err := kb.OpenDB(kbRoot); err == nil {
+	if db, err := kb.GlobalDB(kbRoot); err == nil {
 		_ = distill.RecoverStale(db)
-		db.Close()
 	}
 
 	// Start distill worker pool.
@@ -452,6 +462,7 @@ func runServe(kbRoot string) error {
 		go func() {
 			for action := range actionCh {
 				if action == tray.ActionQuit {
+					kb.CloseGlobalDB()
 					writeTimestamp(filepath.Join(kbRoot, lastShutdownFile))
 					_ = os.Remove(filepath.Join(kbRoot, runningFile))
 					os.Exit(0)
@@ -499,12 +510,11 @@ func catchUpFn(kbRoot string, since time.Time, cfg *config.Config) {
 		log.Printf("catch-up convert: %d file(s) converted", n)
 	}
 
-	db, err := kb.OpenDB(kbRoot)
+	db, err := kb.GlobalDB(kbRoot)
 	if err != nil {
 		log.Printf("catch-up: open db: %v", err)
 		return
 	}
-	defer db.Close()
 
 	n, err := kb.IndexFiles(db, kbRoot)
 	if err != nil {
@@ -514,14 +524,10 @@ func catchUpFn(kbRoot string, since time.Time, cfg *config.Config) {
 	log.Printf("catch-up: %d files indexed", n)
 
 	if cfg.Distill.BaseURL != "" && cfg.Distill.Token != "" && cfg.Distill.Model != "" {
-		db2, err := kb.OpenDB(kbRoot)
-		if err == nil {
-			if n, err := distill.Enqueue(db2, kbRoot); err != nil {
-				log.Printf("catch-up enqueue: %v", err)
-			} else if n > 0 {
-				log.Printf("catch-up enqueue: %d file(s) queued for distillation", n)
-			}
-			db2.Close()
+		if n, err := distill.Enqueue(db, kbRoot); err != nil {
+			log.Printf("catch-up enqueue: %v", err)
+		} else if n > 0 {
+			log.Printf("catch-up enqueue: %d file(s) queued for distillation", n)
 		}
 	}
 }
@@ -535,12 +541,11 @@ func reindexFn(kbRoot string) {
 	}
 
 	// 2. Index all text files into FTS.
-	db, err := kb.OpenDB(kbRoot)
+	db, err := kb.GlobalDB(kbRoot)
 	if err != nil {
 		log.Printf("watcher reindex: open db: %v", err)
 		return
 	}
-	defer db.Close()
 
 	n, err := kb.IndexFiles(db, kbRoot)
 	if err != nil {
@@ -557,14 +562,10 @@ func reindexFn(kbRoot string) {
 	}
 	// 3. Enqueue new raw files for distillation (workers process asynchronously).
 	if cfg.Distill.IsConfigured() {
-		db2, err2 := kb.OpenDB(kbRoot)
-		if err2 == nil {
-			if n, err := distill.Enqueue(db2, kbRoot); err != nil {
-				log.Printf("watcher enqueue: %v", err)
-			} else if n > 0 {
-				log.Printf("watcher enqueue: %d file(s) queued", n)
-			}
-			db2.Close()
+		if n, err := distill.Enqueue(db, kbRoot); err != nil {
+			log.Printf("watcher enqueue: %v", err)
+		} else if n > 0 {
+			log.Printf("watcher enqueue: %d file(s) queued", n)
 		}
 	}
 }
@@ -572,11 +573,10 @@ func reindexFn(kbRoot string) {
 // ── status ─────────────────────────────────────────────────────────────────────
 
 func runStatus(kbRoot string) error {
-	db, err := kb.OpenDB(kbRoot)
+	db, err := kb.GlobalDB(kbRoot)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
-	defer db.Close()
 
 	rows, err := db.Query("SELECT layer, COUNT(*) FROM documents GROUP BY layer")
 	if err != nil {
@@ -609,11 +609,10 @@ func runSearch(kbRoot string, args []string) error {
 	}
 	query := strings.Join(args, " ")
 
-	db, err := kb.OpenDB(kbRoot)
+	db, err := kb.GlobalDB(kbRoot)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
-	defer db.Close()
 
 	results, err := kb.FTSSearch(db, query, nil, 10)
 	if err != nil {
@@ -644,11 +643,10 @@ func runContext(kbRoot string, args []string) error {
 	}
 	question := strings.Join(args, " ")
 
-	db, err := kb.OpenDB(kbRoot)
+	db, err := kb.GlobalDB(kbRoot)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
-	defer db.Close()
 
 	bundle := kb.BuildContext(db, kbRoot, question, nil, 5) //nolint — CLI path uses FTS-only (no embedder)
 
@@ -785,11 +783,10 @@ func runInit(kbRoot string, args []string) error {
 }
 
 func runIndex(kbRoot string) error {
-	db, err := kb.OpenDB(kbRoot)
+	db, err := kb.GlobalDB(kbRoot)
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
-	defer db.Close()
 
 	n, err := kb.IndexFiles(db, kbRoot)
 	if err != nil {
