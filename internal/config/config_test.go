@@ -80,6 +80,7 @@ func TestLoadConfig_Defaults(t *testing.T) {
 
 func TestLoadConfig_FromYAML(t *testing.T) {
 	dir := t.TempDir()
+	t.Setenv("PIEKBS_API_KEY", "")
 	yaml := `server:
   host: "0.0.0.0"
   port: 9999
