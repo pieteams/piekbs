@@ -26,6 +26,7 @@ func makeTempKB(t *testing.T) string {
 
 func TestHandleKBStatus_NoDB(t *testing.T) {
 	dir := makeTempKB(t)
+	t.Cleanup(kb.CloseGlobalDB)
 	result := handleKBStatus(dir)
 
 	docs, ok := result["documents"].(int)
@@ -39,6 +40,7 @@ func TestHandleKBStatus_NoDB(t *testing.T) {
 
 func TestHandleKBStatus_WithDB(t *testing.T) {
 	dir := makeTempKB(t)
+	t.Cleanup(kb.CloseGlobalDB)
 
 	// Write a test file and index it.
 	content := "# Test Doc\n\nThis is a test document."
@@ -46,11 +48,10 @@ func TestHandleKBStatus_WithDB(t *testing.T) {
 		t.Fatalf("write file: %v", err)
 	}
 
-	db, err := kb.OpenDB(dir)
+	db, err := kb.GlobalDB(dir)
 	if err != nil {
 		t.Fatalf("open db: %v", err)
 	}
-	defer db.Close()
 
 	if _, err := kb.IndexFiles(db, dir); err != nil {
 		t.Fatalf("index files: %v", err)
@@ -69,17 +70,17 @@ func TestHandleKBStatus_WithDB(t *testing.T) {
 
 func TestHandleKBSearch(t *testing.T) {
 	dir := makeTempKB(t)
+	t.Cleanup(kb.CloseGlobalDB)
 
 	content := "# Search Target\n\nContent about searching and finding things."
 	if err := os.WriteFile(filepath.Join(dir, "wiki", "search.md"), []byte(content), 0o644); err != nil {
 		t.Fatalf("write file: %v", err)
 	}
 
-	db, err := kb.OpenDB(dir)
+	db, err := kb.GlobalDB(dir)
 	if err != nil {
 		t.Fatalf("open db: %v", err)
 	}
-	defer db.Close()
 
 	if _, err := kb.IndexFiles(db, dir); err != nil {
 		t.Fatalf("index files: %v", err)
@@ -102,10 +103,16 @@ func TestHandleKBSearch(t *testing.T) {
 
 func TestHandleKBReindex(t *testing.T) {
 	dir := makeTempKB(t)
+	t.Cleanup(kb.CloseGlobalDB)
 
 	content := "# Reindex Test\n\nContent for reindex test."
 	if err := os.WriteFile(filepath.Join(dir, "wiki", "reindex.md"), []byte(content), 0o644); err != nil {
 		t.Fatalf("write file: %v", err)
+	}
+
+	// Initialize GlobalDB so handleKBReindex can use it.
+	if _, err := kb.GlobalDB(dir); err != nil {
+		t.Fatalf("init global db: %v", err)
 	}
 
 	result := handleKBReindex(dir, false)
