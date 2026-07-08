@@ -76,6 +76,11 @@ func StripCodeFences(text string) string {
 // titleRe extracts the title value from a frontmatter `title:` line,
 // tolerating optional surrounding quotes.
 var titleRe = regexp.MustCompile(`(?m)^title:\s*"?([^"\n]*)"?\s*$`)
+var httpClient = &http.Client{Timeout: 120 * time.Second}
+var catalogNumberedRe = regexp.MustCompile(`\bM\d{2}\b`)
+var catalogTableRe = regexp.MustCompile(`(?i)(iceberg_|dim_|dwd_|hive_|matrixdb|\.im_edge\.)`)
+var lightweightImgRe = regexp.MustCompile(`!\[.*?\]\(data:image/[^;]+;base64,[^)]{20,}\)`)
+var lightweightMediaRe = regexp.MustCompile(`!\[.*?\]\(media/[^)]+\)`)
 
 // titleFromNote returns the frontmatter title, or fallback if none is found.
 func titleFromNote(note, fallback string) string {
@@ -442,8 +447,7 @@ func callOpenAI(config Config, system, userContent string) (string, error) {
 
 // doHTTP executes the request with a 120s timeout and returns the response body.
 func doHTTP(req *http.Request) ([]byte, error) {
-	client := &http.Client{Timeout: 120 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("http request: %w", err)
 	}
@@ -468,16 +472,14 @@ func isTechnicalCatalog(content string) bool {
 		return false
 	}
 	// Count numbered entity patterns: M01, M02... or similar coded lists
-	numberedRe := regexp.MustCompile(`\bM\d{2}\b`)
-	tableRe := regexp.MustCompile(`(?i)(iceberg_|dim_|dwd_|hive_|matrixdb|\.im_edge\.)`)
 	numberedCount := 0
 	tableCount := 0
 	tableLineCount := 0
 	for _, line := range lines {
-		if numberedRe.MatchString(line) {
+		if catalogNumberedRe.MatchString(line) {
 			numberedCount++
 		}
-		if tableRe.MatchString(line) {
+		if catalogTableRe.MatchString(line) {
 			tableCount++
 		}
 		if strings.HasPrefix(strings.TrimSpace(line), "|") {
@@ -508,13 +510,8 @@ func lightweightNote(rawPath, rawDocID, content string) string {
 		}
 	}
 
-	// Remove base64 image data (large, useless for search)
-	imgRe := regexp.MustCompile(`!\[.*?\]\(data:image/[^;]+;base64,[^)]{20,}\)`)
-	cleaned := imgRe.ReplaceAllString(content, "<!-- image removed -->")
-
-	// Remove markdown image references with media paths
-	mediaRe := regexp.MustCompile(`!\[.*?\]\(media/[^)]+\)`)
-	cleaned = mediaRe.ReplaceAllString(cleaned, "")
+	cleaned := lightweightImgRe.ReplaceAllString(content, "<!-- image removed -->")
+	cleaned = lightweightMediaRe.ReplaceAllString(cleaned, "")
 
 	now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
 

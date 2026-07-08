@@ -303,30 +303,19 @@ func splitKeywords(query string) []string {
 	return out
 }
 
-// buildFTSQuery converts keywords into a FTS5 OR expression with quoted phrases.
-// Single keyword: `"Go"` → `"Go"`.
-// Multiple: `"Go" OR "Python"`.
-func buildFTSQuery(keywords []string) string {
+// buildFTSExpr converts keywords into a FTS5 expression with quoted phrases joined by op.
+// op should be " OR " or " AND ".
+func buildFTSExpr(keywords []string, op string) string {
 	quoted := make([]string, len(keywords))
 	for i, kw := range keywords {
-		// Escape any existing double-quotes inside keyword.
 		kw = strings.ReplaceAll(kw, `"`, `""`)
 		quoted[i] = `"` + kw + `"`
 	}
-	return strings.Join(quoted, " OR ")
+	return strings.Join(quoted, op)
 }
 
-// buildFTSAndQuery converts keywords into a FTS5 AND expression.
-// All keywords must appear in the document.
-// Example: ["RAG", "召回率"] → `"RAG" AND "召回率"`
-func buildFTSAndQuery(keywords []string) string {
-	quoted := make([]string, len(keywords))
-	for i, kw := range keywords {
-		kw = strings.ReplaceAll(kw, `"`, `""`)
-		quoted[i] = `"` + kw + `"`
-	}
-	return strings.Join(quoted, " AND ")
-}
+func buildFTSQuery(keywords []string) string    { return buildFTSExpr(keywords, " OR ") }
+func buildFTSAndQuery(keywords []string) string { return buildFTSExpr(keywords, " AND ") }
 
 // rrfK is the constant in Reciprocal Rank Fusion: score = 1/(k + rank).
 // k=60 is the standard value from the original RRF paper (Cormack et al., 2009).

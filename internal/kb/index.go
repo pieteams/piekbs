@@ -211,6 +211,7 @@ var entityRe = regexp.MustCompile(`【([^|】]+)\|([^】]+)】`)
 
 // tagNoiseRe matches tags that are noise: URLs, WeChat metadata, HTML entities, lone punctuation.
 var tagNoiseRe = regexp.MustCompile(`(?i)https?://|mmbiz|appmsg|wx_fmt|chksm|bizuin|^http|^nbsp$|^sources$|^pattern$|^from$|^wiki\]$|^\[`)
+var asciiLowerOnlyRe = regexp.MustCompile(`^[a-z]+$`)
 
 // isNoisyTag reports whether a tag should be filtered out.
 func isNoisyTag(t string) bool {
@@ -218,7 +219,7 @@ func isNoisyTag(t string) bool {
 		return true
 	}
 	// Pure ASCII lowercase short words that are HTML/Markdown artifacts
-	if len(t) <= 8 && t == strings.ToLower(t) && regexp.MustCompile(`^[a-z]+$`).MatchString(t) {
+	if len(t) <= 8 && t == strings.ToLower(t) && asciiLowerOnlyRe.MatchString(t) {
 		switch t {
 		case "nbsp", "sources", "pattern", "from", "wiki", "tag", "type", "true", "false", "null":
 			return true
