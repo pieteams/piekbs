@@ -46,6 +46,48 @@ func TestUpsertDocument_New(t *testing.T) {
 	}
 }
 
+func TestIndexFiles_TabularFiles(t *testing.T) {
+	dir := setupTestKB(t)
+	db, err := OpenDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	tsv := "社区昵称\t创意帖链接\t创意帖标题\nu1725\thttps://forum.example/t/26353\t水质参数光谱预测系统\n"
+	os.WriteFile(filepath.Join(dir, "raw", "table-01.snapshot.tsv"), []byte(tsv), 0644)
+	os.WriteFile(filepath.Join(dir, "raw", "records.csv"), []byte("name,title\nalice,project-x\n"), 0644)
+
+	n, err := IndexFiles(db, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 2 {
+		t.Errorf("indexed %d files, want 2", n)
+	}
+
+	for _, id := range []string{"raw/table-01.snapshot.tsv", "raw/records.csv"} {
+		var layer string
+		err = db.QueryRow("SELECT layer FROM documents WHERE id = ?", id).Scan(&layer)
+		if err != nil {
+			t.Fatalf("%s not indexed: %v", id, err)
+		}
+		if layer != "raw" {
+			t.Errorf("%s layer = %q, want 'raw'", id, layer)
+		}
+	}
+
+	// Cell values must be reachable through FTS.
+	var hits int
+	err = db.QueryRow("SELECT COUNT(*) FROM document_fts WHERE document_fts MATCH ?", "水质参数光谱预测系统").Scan(&hits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hits != 1 {
+		t.Errorf("FTS hits for TSV cell value = %d, want 1", hits)
+	}
+}
+
 func TestUpsertDocument_SkipUnchanged(t *testing.T) {
 	dir := setupTestKB(t)
 	db, _ := OpenDB(dir)

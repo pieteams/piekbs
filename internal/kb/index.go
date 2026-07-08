@@ -14,7 +14,7 @@ import (
 	"unicode/utf8"
 )
 
-var textExtensions = map[string]bool{".md": true, ".txt": true, ".rst": true}
+var textExtensions = map[string]bool{".md": true, ".txt": true, ".rst": true, ".tsv": true, ".csv": true}
 var okfReserved = map[string]bool{"index.md": true, "log.md": true}
 
 // DocID returns the relative slash-separated path used as document primary key.
