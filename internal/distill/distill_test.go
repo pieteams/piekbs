@@ -134,6 +134,75 @@ func TestDistillFile_WritesLogAndSources(t *testing.T) {
 	}
 }
 
+func TestGroundProvenance_FrontmatterTimestamp(t *testing.T) {
+	imported := time.Date(2026, 6, 20, 12, 0, 0, 0, time.UTC)
+	note := func(fields string) string {
+		return "---\ntype: source-note\ntitle: T\n" + fields + "\n---\n\nBody"
+	}
+
+	cases := []struct {
+		name string
+		text string
+		raw  string
+		want string
+	}{
+		{
+			name: "hallucinated timestamp blanked",
+			text: note(`timestamp: "2025-07-17T00:00:00Z"`),
+			raw:  "# Doc\nNo dates anywhere.",
+			want: `timestamp: ""`,
+		},
+		{
+			name: "raw frontmatter timestamp wins",
+			text: note(`timestamp: "2025-07-17T00:00:00Z"`),
+			raw:  "---\ntimestamp: \"2026-06-14T09:00:00Z\"\n---\n# Doc",
+			want: `timestamp: "2026-06-14T09:00:00Z"`,
+		},
+		{
+			name: "date backed by raw body kept",
+			text: note(`timestamp: "2026-06-14T09:00:00Z"`),
+			raw:  "# Doc\nPublished on 2026-06-14 by the team.",
+			want: `timestamp: "2026-06-14T09:00:00Z"`,
+		},
+		{
+			name: "backed but later than import blanked",
+			text: note(`timestamp: "2026-07-21T00:00:00Z"`),
+			raw:  "# Doc\nResults will be announced on 2026-07-21.",
+			want: `timestamp: ""`,
+		},
+		{
+			name: "unparseable timestamp blanked",
+			text: note(`timestamp: "sometime in July"`),
+			raw:  "# Doc\nsometime in July",
+			want: `timestamp: ""`,
+		},
+		{
+			name: "lightweight timestamp untouched",
+			text: note("timestamp: \"2026-07-08T10:00:00Z\"\nprocessing: lightweight"),
+			raw:  "# Doc\nNo dates anywhere.",
+			want: `timestamp: "2026-07-08T10:00:00Z"`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := distill.GroundProvenance(tc.text, tc.raw, imported)
+			if !strings.Contains(got, tc.want) {
+				t.Errorf("GroundProvenance() missing %q:\n%s", tc.want, got)
+			}
+		})
+	}
+}
+
+func TestGroundProvenance_BodyTimestampLineUntouched(t *testing.T) {
+	imported := time.Date(2026, 6, 20, 12, 0, 0, 0, time.UTC)
+	text := "---\ntype: source-note\ntitle: T\n---\n\ntimestamp: \"2025-01-01T00:00:00Z\" appears in body text"
+	got := distill.GroundProvenance(text, "# Doc", imported)
+	if got != text {
+		t.Errorf("body timestamp line was modified:\ngot:  %q\nwant: %q", got, text)
+	}
+}
+
 func TestDistillFile_GroundsFabricatedProvenance(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "raw"), 0o755); err != nil {
@@ -158,6 +227,7 @@ No author or publication date is provided.`
 type: source-note
 title: Official announcement
 resource: "https://invented.example/report"
+timestamp: "2025-07-17T00:00:00Z"
 sources: ["wrong"]
 ---
 
@@ -184,13 +254,14 @@ Grounded summary.`
 		t.Fatal(err)
 	}
 	got := string(note)
-	for _, unwanted := range []string{"invented.example", "Invented Committee", "July 17, 2025"} {
+	for _, unwanted := range []string{"invented.example", "Invented Committee", "July 17, 2025", "2025-07-17"} {
 		if strings.Contains(got, unwanted) {
 			t.Errorf("fabricated provenance %q leaked into note:\n%s", unwanted, got)
 		}
 	}
 	for _, want := range []string{
 		`resource: "https://example.larkoffice.com/wiki/source"`,
+		`timestamp: ""`,
 		"- Author: Not provided in source.",
 		"- Published: Not provided in source.",
 		"- Imported: 2026-06-20",
