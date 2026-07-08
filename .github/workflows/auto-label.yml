@@ -9,6 +9,10 @@ permissions:
 
 jobs:
   label:
+    # Fork PRs get a read-only GITHUB_TOKEN on pull_request events, so the
+    # addLabels call always fails with "Resource not accessible by integration".
+    # Skip instead of failing; labels for external PRs can be added by hand.
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Label PR by title prefix
