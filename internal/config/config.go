@@ -253,8 +253,15 @@ func splitKV(s string) (string, string) {
 	// — the key is split at the first ':' but the value is the full quoted
 	// string, so we only need to remove the surrounding quote characters.
 	if len(val) >= 2 {
-		if (val[0] == '"' && val[len(val)-1] == '"') ||
-			(val[0] == '\'' && val[len(val)-1] == '\'') {
+		if val[0] == '"' && val[len(val)-1] == '"' {
+			// Save writes values with %q (Go-quoted), so a double-quoted value
+			// may contain \" and \\ escapes. Unquote to recover the original;
+			// fall back to a plain strip for hand-written unescaped values.
+			if unq, err := strconv.Unquote(val); err == nil {
+				return key, unq
+			}
+			val = val[1 : len(val)-1]
+		} else if val[0] == '\'' && val[len(val)-1] == '\'' {
 			val = val[1 : len(val)-1]
 		}
 	}

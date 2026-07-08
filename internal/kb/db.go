@@ -67,7 +67,10 @@ func OpenDB(kbRoot string) (*sql.DB, error) {
 
 	dbPath := filepath.Join(indexDir, "kb.sqlite")
 
-	db, err := sql.Open("sqlite", dbPath+"?_journal_mode=WAL&_busy_timeout=5000")
+	// modernc.org/sqlite only honors PRAGMAs via the _pragma= DSN parameter.
+	// The mattn-style _journal_mode=/_busy_timeout= keys are silently ignored,
+	// which would leave the DB in rollback-journal mode with busy_timeout=0.
+	db, err := sql.Open("sqlite", dbPath+"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)")
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}

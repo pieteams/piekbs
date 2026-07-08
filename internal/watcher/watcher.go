@@ -147,7 +147,9 @@ func isUnderDir(path, dir string) bool {
 func isConvertedPath(path, rawDir string) bool {
 	convertedDir := filepath.Join(rawDir, "converted")
 	rel, err := filepath.Rel(convertedDir, path)
-	return err == nil && !filepath.IsAbs(rel) && rel != ".." && len(rel) > 0 && rel[:2] != ".."
+	// len(rel) < 2 guards against a slice-bounds panic when rel is "." (the
+	// converted dir itself) or a single-char name; both are inside converted/.
+	return err == nil && !filepath.IsAbs(rel) && rel != ".." && (len(rel) < 2 || rel[:2] != "..")
 }
 
 // isGeneratedWikiPath reports whether path is maintained by PieKBS itself.
