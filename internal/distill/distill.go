@@ -49,7 +49,8 @@ func stripConvertedPrefix(rel string) string {
 	return rel
 }
 
-// StripCodeFences removes a leading ```[language] ... ``` wrapper if present.
+// StripCodeFences removes a leading ```[language] ... ``` wrapper if present,
+// or a dangling closing fence the LLM appended without ever opening one.
 func StripCodeFences(text string) string {
 	text = strings.TrimSpace(text)
 
@@ -60,7 +61,7 @@ func StripCodeFences(text string) string {
 	}
 	firstLine := text[:firstNL]
 	if !strings.HasPrefix(firstLine, "```") {
-		return text
+		return stripDanglingFence(text)
 	}
 
 	// Must end with closing fence
@@ -71,6 +72,26 @@ func StripCodeFences(text string) string {
 	// Strip first line and last fence line
 	inner := text[firstNL+1 : len(text)-3]
 	return strings.TrimRight(inner, "\n")
+}
+
+// stripDanglingFence removes a lone ``` on the final line when the text's
+// fences are unbalanced (odd count). A balanced trailing fence — a real code
+// block ending the document — is left intact.
+func stripDanglingFence(text string) string {
+	lastNL := strings.LastIndexByte(text, '\n')
+	if lastNL < 0 || strings.TrimSpace(text[lastNL+1:]) != "```" {
+		return text
+	}
+	fences := 0
+	for _, line := range strings.Split(text, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "```") {
+			fences++
+		}
+	}
+	if fences%2 == 0 {
+		return text
+	}
+	return strings.TrimRight(text[:lastNL], "\n")
 }
 
 // titleRe extracts the title value from a frontmatter `title:` line,

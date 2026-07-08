@@ -36,6 +36,21 @@ func TestStripCodeFences(t *testing.T) {
 			input: "```\nsome code\n```",
 			want:  "some code",
 		},
+		{
+			name:  "dangling trailing fence",
+			input: "---\ntitle: Test\n---\n\nBody content\n```",
+			want:  "---\ntitle: Test\n---\n\nBody content",
+		},
+		{
+			name:  "balanced trailing code block preserved",
+			input: "---\ntitle: Test\n---\n\n```go\ncode\n```",
+			want:  "---\ntitle: Test\n---\n\n```go\ncode\n```",
+		},
+		{
+			name:  "dangling fence after embedded balanced block",
+			input: "---\ntitle: Test\n---\n\n```go\ncode\n```\n\nMore text\n```",
+			want:  "---\ntitle: Test\n---\n\n```go\ncode\n```\n\nMore text",
+		},
 	}
 
 	for _, tc := range cases {
