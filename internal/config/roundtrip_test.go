@@ -9,6 +9,10 @@ import "testing"
 // survive a save→load cycle. Before the fix, splitKV only stripped the outer
 // quotes without unescaping, corrupting tokens/api keys with special chars.
 func TestConfigValueRoundTrip(t *testing.T) {
+	// Clear PIEKBS_* env vars so they don't override test values.
+	for _, k := range []string{"PIEKBS_API_KEY", "PIEKBS_DISTILL_TOKEN", "PIEKBS_DISTILL_BASE_URL"} {
+		t.Setenv(k, "")
+	}
 	dir := t.TempDir()
 	cfg, err := Load(dir)
 	if err != nil {
