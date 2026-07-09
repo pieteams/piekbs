@@ -61,3 +61,7 @@ internal/embed/models/
 
 # Eval directory (local only, not part of release)
 eval/
+
+# AI agent instructions (local only)
+AGENTS.md
+CLAUDE.md
