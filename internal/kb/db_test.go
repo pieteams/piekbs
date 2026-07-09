@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestOpenDB_CreatesSchema(t *testing.T) {
@@ -106,7 +104,7 @@ func TestDistillQueueMigration(t *testing.T) {
 	}
 
 	// 建一个没有 distill_queue 的旧库
-	oldDB, err := sql.Open("sqlite3", dbPath)
+	oldDB, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		t.Fatal(err)
 	}

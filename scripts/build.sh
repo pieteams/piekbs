@@ -17,8 +17,7 @@
 #   ./scripts/build.sh 1.2.0 linux-amd64
 #
 # Dependencies:
-#   Linux targets: brew install FiloSottile/musl-cross/musl-cross
-#   macOS dmg:     brew install create-dmg  (optional, skipped if absent)
+#   macOS dmg: brew install create-dmg  (optional, skipped if absent)
 set -e
 
 VERSION=${1:-0.1.0}
@@ -103,19 +102,12 @@ build_darwin_arm64() {
 # ── Linux tar.gz ──────────────────────────────────────────────────────────────
 
 build_linux() {
-    local goarch=$1 cc=$2 suffix=$3
+    local goarch=$1 suffix=$2
     echo "→ building $suffix (tar.gz) ..."
-
-    if ! command -v "$cc" &>/dev/null; then
-        echo "  ✗ $cc not found — skipping $suffix"
-        echo "    install: brew install FiloSottile/musl-cross/musl-cross"
-        return
-    fi
 
     local bin="$OUTDIR/piekbs-${suffix}"
 
-    CGO_ENABLED=1 GOOS=linux GOARCH=$goarch \
-        CC="$cc" \
+    CGO_ENABLED=0 GOOS=linux GOARCH=$goarch \
         go build -tags fts5 \
         -ldflags "-s -w -X main.Version=${VERSION}" \
         -o "$bin" ./cmd/piekbs/
@@ -159,8 +151,8 @@ echo "Building piekbs v${VERSION}"
 echo
 
 want "darwin-arm64"  && build_darwin_arm64
-want "linux-amd64"   && build_linux amd64 x86_64-linux-musl-gcc  linux-amd64
-want "linux-arm64"   && build_linux arm64 aarch64-linux-musl-gcc linux-arm64
+want "linux-amd64"   && build_linux amd64  linux-amd64
+want "linux-arm64"   && build_linux arm64  linux-arm64
 want "windows-amd64" && build_windows_amd64
 
 echo

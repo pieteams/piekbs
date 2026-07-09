@@ -7,7 +7,6 @@ require (
 	github.com/getlantern/systray v1.2.2
 	github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728
 	github.com/mark3labs/mcp-go v0.54.1
-	github.com/mattn/go-sqlite3 v1.14.45
 	golang.org/x/net v0.56.0
 	modernc.org/sqlite v1.53.0
 )
