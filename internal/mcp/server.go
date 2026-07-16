@@ -77,7 +77,9 @@ CITATION RULES (mandatory):
   - If a conflict appears in results, acknowledge both sides.`
 
 // Start creates an MCP HTTP server, registers KB tools, and listens on addr.
-// If apiKey is non-empty, all requests must include a matching x-api-key header.
+// If apiKey is non-empty, requests must include either:
+//   - Authorization: Bearer <apiKey> (recommended, HTTP standard)
+//   - x-api-key: <apiKey> (deprecated, will be removed in 6 months)
 func Start(addr, kbRoot, apiKey string) error {
 	mux := http.NewServeMux()
 	RegisterRoutes(mux, kbRoot, apiKey)
