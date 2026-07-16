@@ -17,7 +17,7 @@ func TestWithProtocolVersion(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	// 包装中间件
+	// 包装中间件（现在是 no-op，直接返回 handler）
 	wrappedHandler := withProtocolVersion(handler)
 
 	// 测试1: 不发送版本 header（应该通过）
@@ -37,13 +37,13 @@ func TestWithProtocolVersion(t *testing.T) {
 		t.Errorf("expected 200, got %d", rec.Code)
 	}
 
-	// 测试3: 发送错误的版本（应该返回 400）
+	// 测试3: 发送任何版本 header（应该通过，因为版本协商在 SDK 层处理）
 	req = httptest.NewRequest("POST", "/mcp", nil)
 	req.Header.Set("MCP-Protocol-Version", "2024-11-05")
 	rec = httptest.NewRecorder()
 	wrappedHandler.ServeHTTP(rec, req)
-	if rec.Code != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", rec.Code)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
 	}
 }
 
@@ -128,13 +128,13 @@ func TestMCPIntegration(t *testing.T) {
 		t.Errorf("expected 200, got %d", rec.Code)
 	}
 
-	// 测试3: 发送错误的协议版本（应该返回 400）
+	// 测试3: 发送任意协议版本 header（应该通过，版本协商在 SDK 层处理）
 	req = httptest.NewRequest("POST", "/mcp", strings.NewReader(validJSONRPC))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("MCP-Protocol-Version", "2024-11-05")
 	rec = httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
-	if rec.Code != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", rec.Code)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
 	}
 }
