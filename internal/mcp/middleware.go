@@ -6,22 +6,11 @@ import (
 	"strings"
 )
 
-// MCP 协议版本（使用日期格式，不是语义化版本）
-const mcpProtocolVersion = "2025-06-18"
-
-// withProtocolVersion 检查 MCP-Protocol-Version header
-// 如果客户端发送了不支持的版本，返回 400 Bad Request
+// withProtocolVersion is a no-op — MCP protocol version negotiation happens
+// via the JSON-RPC initialize request/response, not HTTP headers.
+// The mcp-go SDK handles this correctly in the server.
 func withProtocolVersion(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 检查协议版本（可选，用于调试）
-		if v := r.Header.Get("MCP-Protocol-Version"); v != "" {
-			if v != mcpProtocolVersion {
-				http.Error(w, "unsupported protocol version", http.StatusBadRequest)
-				return
-			}
-		}
-		h.ServeHTTP(w, r)
-	})
+	return h
 }
 
 // withAPIKey rejects requests missing a valid x-api-key header.
