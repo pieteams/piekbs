@@ -238,6 +238,38 @@ PieKBS expose les outils KB via le protocole MCP.
 
 Les opérations d'administration (`status`, `reindex`, `lint`) sont disponibles via l'interface Web ou CLI (`piekbs status`, `piekbs index`, `piekbs lint`).
 
+## Version du protocole MCP
+
+PieKBS prend en charge la version du protocole MCP `2025-06-18`. Lors de la connexion via HTTP, les clients peuvent inclure optionnellement l'en-tête `MCP-Protocol-Version` pour garantir la compatibilité.
+
+Exemple :
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+MCP-Protocol-Version: 2025-06-18
+Content-Type: application/json
+```
+
+## Authentification
+
+PieKBS prend en charge deux méthodes d'authentification :
+
+1. **Authorization: Bearer** (recommandé)
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+Authorization: Bearer your-api-key
+Content-Type: application/json
+```
+
+2. **x-api-key** (obsolète, sera supprimé dans 6 mois)
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+x-api-key: your-api-key
+Content-Type: application/json
+```
+
 ---
 
 ### Scénario 1 : Partage multi-agents local
@@ -264,14 +296,14 @@ Ajouter à `~/.claude.json` sous `mcpServers` :
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
-        "x-api-key": "${PIEKBS_API_KEY}"
+        "Authorization": "Bearer ${PIEKBS_API_KEY}"
       }
     }
   }
 }
 ```
 
-`x-api-key` correspond à `server.api_key` dans `config.yaml`. Omettez `headers` si aucun api_key n'est défini.
+Utilisez `Authorization: Bearer` (recommandé) ou `x-api-key` (obsolète) pour l'authentification. La clé correspond à `server.api_key` dans `config.yaml`. Omettez `headers` si aucun api_key n'est défini.
 
 ---
 

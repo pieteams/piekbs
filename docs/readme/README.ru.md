@@ -238,6 +238,38 @@ PieKBS предоставляет инструменты базы знаний �
 
 Административные операции (`status`, `reindex`, `lint`) доступны через Web UI или CLI (`piekbs status`, `piekbs index`, `piekbs lint`).
 
+## Версия протокола MCP
+
+PieKBS поддерживает версию протокола MCP `2025-06-18`. При подключении через HTTP клиенты могут опционально включить заголовок `MCP-Protocol-Version` для обеспечения совместимости.
+
+Пример:
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+MCP-Protocol-Version: 2025-06-18
+Content-Type: application/json
+```
+
+## Аутентификация
+
+PieKBS поддерживает два метода аутентификации:
+
+1. **Authorization: Bearer** (рекомендуется)
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+Authorization: Bearer your-api-key
+Content-Type: application/json
+```
+
+2. **x-api-key** (устаревший, будет удалён через 6 месяцев)
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+x-api-key: your-api-key
+Content-Type: application/json
+```
+
 ---
 
 ### Сценарий 1: Локальный многоагентный обмен
@@ -264,14 +296,14 @@ piekbs serve
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
-        "x-api-key": "${PIEKBS_API_KEY}"
+        "Authorization": "Bearer ${PIEKBS_API_KEY}"
       }
     }
   }
 }
 ```
 
-`x-api-key` соответствует `server.api_key` в `config.yaml`. Опустите `headers`, если api_key не задан.
+Используйте `Authorization: Bearer` (рекомендуется) или `x-api-key` (устаревший) для аутентификации. Ключ соответствует `server.api_key` в `config.yaml`. Опустите `headers`, если api_key не задан.
 
 ---
 

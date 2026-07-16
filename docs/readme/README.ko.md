@@ -238,6 +238,38 @@ PieKBS는 MCP 프로토콜을 통해 KB 도구를 노출합니다.
 
 관리 작업 (`status`, `reindex`, `lint`)은 Web UI 또는 CLI를 통해 사용 가능합니다 (`piekbs status`, `piekbs index`, `piekbs lint`).
 
+## MCP 프로토콜 버전
+
+PieKBS는 MCP 프로토콜 버전 `2025-06-18`을 지원합니다. HTTP를 통해 연결할 때 클라이언트는 호환성을 보장하기 위해 `MCP-Protocol-Version` 헤더를 선택적으로 포함할 수 있습니다.
+
+예시:
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+MCP-Protocol-Version: 2025-06-18
+Content-Type: application/json
+```
+
+## 인증
+
+PieKBS는 두 가지 인증 방법을 지원합니다:
+
+1. **Authorization: Bearer** (권장)
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+Authorization: Bearer your-api-key
+Content-Type: application/json
+```
+
+2. **x-api-key** (사용 중지, 6개월 후 제거)
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+x-api-key: your-api-key
+Content-Type: application/json
+```
+
 ---
 
 ### 시나리오 1: 로컬 멀티 에이전트 공유
@@ -264,14 +296,14 @@ piekbs serve
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
-        "x-api-key": "${PIEKBS_API_KEY}"
+        "Authorization": "Bearer ${PIEKBS_API_KEY}"
       }
     }
   }
 }
 ```
 
-`x-api-key`는 `config.yaml`의 `server.api_key`에 해당합니다. api_key가 설정되지 않은 경우 `headers`를 생략합니다.
+`Authorization: Bearer` (권장) 또는 `x-api-key` (사용 중지)를 사용하여 인증합니다. 키는 `config.yaml`의 `server.api_key`에 해당합니다. api_key가 설정되지 않은 경우 `headers`를 생략합니다.
 
 ---
 

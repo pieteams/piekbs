@@ -238,6 +238,38 @@ PieKBS 透過 MCP 協議對外暴露 KB 工具。
 
 管理操作（狀態、重建索引、健康檢查）透過 Web UI 或 CLI 執行：`piekbs status`、`piekbs index`、`piekbs lint`。
 
+## MCP 協議版本
+
+PieKBS 支援 MCP 協議版本 `2025-06-18`。透過 HTTP 連接時，用戶端可選擇包含 `MCP-Protocol-Version` 標頭以確保相容性。
+
+範例：
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+MCP-Protocol-Version: 2025-06-18
+Content-Type: application/json
+```
+
+## 認證
+
+PieKBS 支援兩種認證方式：
+
+1. **Authorization: Bearer**（推薦）
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+Authorization: Bearer your-api-key
+Content-Type: application/json
+```
+
+2. **x-api-key**（已棄用，將於 6 個月後移除）
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+x-api-key: your-api-key
+Content-Type: application/json
+```
+
 ---
 
 ### 場景一：本機多 Agent 共享
@@ -264,14 +296,14 @@ piekbs serve
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
-        "x-api-key": "${PIEKBS_API_KEY}"
+        "Authorization": "Bearer ${PIEKBS_API_KEY}"
       }
     }
   }
 }
 ```
 
-`x-api-key` 對應 `config.yaml` 中 `server.api_key`，未設定時可省略 headers。
+使用 `Authorization: Bearer`（推薦）或 `x-api-key`（已棄用）進行認證。金鑰對應 `config.yaml` 中的 `server.api_key`。未設定 api_key 時可省略 `headers`。
 
 ---
 
