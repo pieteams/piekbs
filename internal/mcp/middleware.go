@@ -1,6 +1,10 @@
 package mcp
 
-import "net/http"
+import (
+	"log"
+	"net/http"
+	"strings"
+)
 
 // MCP 协议版本（使用日期格式，不是语义化版本）
 const mcpProtocolVersion = "2025-06-18"
@@ -21,7 +25,7 @@ func withProtocolVersion(h http.Handler) http.Handler {
 }
 
 // withAPIKey rejects requests missing a valid x-api-key header.
-// If key is empty, all requests are allowed (auth disabled).
+// Deprecated: Use withAuth instead. Kept for backward compatibility.
 func withAPIKey(key string, h http.Handler) http.Handler {
 	if key == "" {
 		return h
@@ -32,6 +36,41 @@ func withAPIKey(key string, h http.Handler) http.Handler {
 			return
 		}
 		h.ServeHTTP(w, r)
+	})
+}
+
+// withAuth implements unified authentication middleware.
+// Priority: Authorization: Bearer header (HTTP/MCP standard)
+// Fallback: x-api-key header (deprecated, for backward compatibility)
+// If key is empty, all requests are allowed (auth disabled).
+func withAuth(key string, h http.Handler) http.Handler {
+	if key == "" {
+		return h
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check Authorization: Bearer header (preferred)
+		if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+			if strings.HasPrefix(authHeader, "Bearer ") {
+				token := strings.TrimPrefix(authHeader, "Bearer ")
+				if token == key {
+					h.ServeHTTP(w, r)
+					return
+				}
+			}
+		}
+
+		// Fallback: x-api-key header (deprecated)
+		if apiKey := r.Header.Get("x-api-key"); apiKey != "" {
+			log.Printf("WARNING: x-api-key header is deprecated. Use Authorization: Bearer instead.")
+			if apiKey == key {
+				h.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		// Authentication failed
+		w.Header().Set("WWW-Authenticate", `Bearer realm="MCP Server"`)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 	})
 }
 

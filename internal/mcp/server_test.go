@@ -41,3 +41,48 @@ func TestWithProtocolVersion(t *testing.T) {
 		t.Errorf("expected 400, got %d", rec.Code)
 	}
 }
+
+func TestWithAuth(t *testing.T) {
+	// 创建测试处理器
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// 包装中间件
+	wrappedHandler := withAuth("test-key", handler)
+
+	// 测试1: 不发送任何 header（应该返回 401）
+	req := httptest.NewRequest("POST", "/mcp", nil)
+	rec := httptest.NewRecorder()
+	wrappedHandler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", rec.Code)
+	}
+
+	// 测试2: 发送正确的 Authorization: Bearer（应该通过）
+	req = httptest.NewRequest("POST", "/mcp", nil)
+	req.Header.Set("Authorization", "Bearer test-key")
+	rec = httptest.NewRecorder()
+	wrappedHandler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+
+	// 测试3: 发送正确的 x-api-key（应该通过，兼容性）
+	req = httptest.NewRequest("POST", "/mcp", nil)
+	req.Header.Set("x-api-key", "test-key")
+	rec = httptest.NewRecorder()
+	wrappedHandler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+
+	// 测试4: 发送错误的 token（应该返回 401）
+	req = httptest.NewRequest("POST", "/mcp", nil)
+	req.Header.Set("Authorization", "Bearer wrong-key")
+	rec = httptest.NewRecorder()
+	wrappedHandler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", rec.Code)
+	}
+}

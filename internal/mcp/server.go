@@ -115,7 +115,7 @@ func RegisterRoutes(mux *http.ServeMux, kbRoot string, apiKey ...string) {
 
 	httpSrv := mcpserver.NewStreamableHTTPServer(s)
 
-	handler := withCORS(withAPIKey(key, withProtocolVersion(httpSrv)))
+	handler := withCORS(withAuth(key, withProtocolVersion(httpSrv)))
 	mux.Handle("/mcp", handler)
 	mux.Handle("/mcp/", handler)
 }
