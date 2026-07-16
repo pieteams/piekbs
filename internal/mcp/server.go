@@ -9,10 +9,13 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/pieteams/piekbs/internal/kb"
 	"github.com/mark3labs/mcp-go/mcp"
 	mcpserver "github.com/mark3labs/mcp-go/server"
+	"github.com/pieteams/piekbs/internal/kb"
 )
+
+// MCP 协议版本（使用日期格式，不是语义化版本）
+const mcpProtocolVersion = "2025-06-18"
 
 const serverInstructions = `PieKBS is a knowledge search engine for this project. It stores distilled
 wiki pages (source-notes, concepts, comparisons, decisions) and the raw source
@@ -115,7 +118,7 @@ func RegisterRoutes(mux *http.ServeMux, kbRoot string, apiKey ...string) {
 
 	httpSrv := mcpserver.NewStreamableHTTPServer(s)
 
-	handler := withCORS(withAPIKey(key, httpSrv))
+	handler := withCORS(withAPIKey(key, withProtocolVersion(httpSrv)))
 	mux.Handle("/mcp", handler)
 	mux.Handle("/mcp/", handler)
 }
@@ -198,6 +201,21 @@ func registerTools(s *mcpserver.MCPServer, kbRoot string, embedder kb.Embedder) 
 		return toolResultJSON(data)
 	})
 
+}
+
+// withProtocolVersion 检查 MCP-Protocol-Version header
+// 如果客户端发送了不支持的版本，返回 400 Bad Request
+func withProtocolVersion(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 检查协议版本（可选，用于调试）
+		if v := r.Header.Get("MCP-Protocol-Version"); v != "" {
+			if v != mcpProtocolVersion {
+				http.Error(w, "unsupported protocol version", http.StatusBadRequest)
+				return
+			}
+		}
+		h.ServeHTTP(w, r)
+	})
 }
 
 // withAPIKey rejects requests missing a valid x-api-key header.

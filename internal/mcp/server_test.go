@@ -1,0 +1,45 @@
+//go:build fts5
+
+package mcp
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+func TestWithProtocolVersion(t *testing.T) {
+	// 创建测试处理器
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// 包装中间件
+	wrappedHandler := withProtocolVersion(handler)
+
+	// 测试1: 不发送版本 header（应该通过）
+	req := httptest.NewRequest("POST", "/mcp", nil)
+	rec := httptest.NewRecorder()
+	wrappedHandler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+
+	// 测试2: 发送正确的版本（应该通过）
+	req = httptest.NewRequest("POST", "/mcp", nil)
+	req.Header.Set("MCP-Protocol-Version", "2025-06-18")
+	rec = httptest.NewRecorder()
+	wrappedHandler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", rec.Code)
+	}
+
+	// 测试3: 发送错误的版本（应该返回 400）
+	req = httptest.NewRequest("POST", "/mcp", nil)
+	req.Header.Set("MCP-Protocol-Version", "2024-11-05")
+	rec = httptest.NewRecorder()
+	wrappedHandler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rec.Code)
+	}
+}
