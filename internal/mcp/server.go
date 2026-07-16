@@ -14,9 +14,6 @@ import (
 	"github.com/pieteams/piekbs/internal/kb"
 )
 
-// MCP 协议版本（使用日期格式，不是语义化版本）
-const mcpProtocolVersion = "2025-06-18"
-
 const serverInstructions = `PieKBS is a knowledge search engine for this project. It stores distilled
 wiki pages (source-notes, concepts, comparisons, decisions) and the raw source
 documents they cite. Use it like a search engine: search with multiple keyword
@@ -201,50 +198,6 @@ func registerTools(s *mcpserver.MCPServer, kbRoot string, embedder kb.Embedder) 
 		return toolResultJSON(data)
 	})
 
-}
-
-// withProtocolVersion 检查 MCP-Protocol-Version header
-// 如果客户端发送了不支持的版本，返回 400 Bad Request
-func withProtocolVersion(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 检查协议版本（可选，用于调试）
-		if v := r.Header.Get("MCP-Protocol-Version"); v != "" {
-			if v != mcpProtocolVersion {
-				http.Error(w, "unsupported protocol version", http.StatusBadRequest)
-				return
-			}
-		}
-		h.ServeHTTP(w, r)
-	})
-}
-
-// withAPIKey rejects requests missing a valid x-api-key header.
-// If key is empty, all requests are allowed (auth disabled).
-func withAPIKey(key string, h http.Handler) http.Handler {
-	if key == "" {
-		return h
-	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("x-api-key") != key {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-		h.ServeHTTP(w, r)
-	})
-}
-
-// withCORS adds permissive CORS headers for local MCP clients.
-func withCORS(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Mcp-Session-Id, x-api-key")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		h.ServeHTTP(w, r)
-	})
 }
 
 // toolResultJSON marshals data to JSON and returns a text CallToolResult.
