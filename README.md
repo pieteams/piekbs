@@ -238,6 +238,38 @@ PieKBS exposes KB tools via the MCP protocol.
 
 Admin operations (`status`, `reindex`, `lint`) are available via the Web UI or CLI (`piekbs status`, `piekbs index`, `piekbs lint`).
 
+## MCP Protocol Version
+
+PieKBS supports the MCP protocol version `2025-06-18`. When connecting via HTTP, clients can optionally include the `MCP-Protocol-Version` header to ensure compatibility.
+
+Example:
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+MCP-Protocol-Version: 2025-06-18
+Content-Type: application/json
+```
+
+## Authentication
+
+PieKBS supports two authentication methods:
+
+1. **Authorization: Bearer** (recommended)
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+Authorization: Bearer your-api-key
+Content-Type: application/json
+```
+
+2. **x-api-key** (deprecated, will be removed in 6 months)
+```http
+POST /mcp HTTP/1.1
+Host: localhost:8080
+x-api-key: your-api-key
+Content-Type: application/json
+```
+
 ---
 
 ### Scenario 1: Local Multi-Agent Sharing
@@ -264,14 +296,14 @@ Add to `~/.claude.json` under `mcpServers`:
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
-        "x-api-key": "${PIEKBS_API_KEY}"
+        "Authorization": "Bearer ${PIEKBS_API_KEY}"
       }
     }
   }
 }
 ```
 
-`x-api-key` corresponds to `server.api_key` in `config.yaml`. Omit `headers` if no api_key is set.
+Use `Authorization: Bearer` (recommended) or `x-api-key` (deprecated) for authentication. The key corresponds to `server.api_key` in `config.yaml`. Omit `headers` if no api_key is set.
 
 ---
 
