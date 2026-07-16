@@ -238,18 +238,6 @@ PieKBS stellt KB-Tools über das MCP-Protokoll bereit.
 
 Admin-Operationen (`status`, `reindex`, `lint`) sind über die Web-UI oder CLI verfügbar (`piekbs status`, `piekbs index`, `piekbs lint`).
 
-## MCP-Protokollversion
-
-PieKBS unterstützt die MCP-Protokollversion `2025-06-18`. Bei HTTP-Verbindungen können Clients optional den Header `MCP-Protocol-Version` einfügen, um die Kompatibilität sicherzustellen.
-
-Beispiel:
-```http
-POST /mcp HTTP/1.1
-Host: localhost:8080
-MCP-Protocol-Version: 2025-06-18
-Content-Type: application/json
-```
-
 ## Authentifizierung
 
 PieKBS unterstützt zwei Authentifizierungsmethoden:

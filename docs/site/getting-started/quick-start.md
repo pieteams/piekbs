@@ -24,14 +24,14 @@ Add to `~/.claude.json` under `mcpServers`:
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
-        "x-api-key": "${PIEKBS_API_KEY}"
+        "Authorization": "Bearer ${PIEKBS_API_KEY}"
       }
     }
   }
 }
 ```
 
-`x-api-key` corresponds to `server.api_key` in `config.yaml`. Omit `headers` if no api_key is set.
+Use `Authorization: Bearer` (recommended) or `x-api-key` (deprecated) for authentication. The key corresponds to `server.api_key` in `config.yaml`. Omit `headers` if no api_key is set.
 
 **stdio mode** (for hosted environments):
 

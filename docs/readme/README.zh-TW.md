@@ -238,18 +238,6 @@ PieKBS 透過 MCP 協議對外暴露 KB 工具。
 
 管理操作（狀態、重建索引、健康檢查）透過 Web UI 或 CLI 執行：`piekbs status`、`piekbs index`、`piekbs lint`。
 
-## MCP 協議版本
-
-PieKBS 支援 MCP 協議版本 `2025-06-18`。透過 HTTP 連接時，用戶端可選擇包含 `MCP-Protocol-Version` 標頭以確保相容性。
-
-範例：
-```http
-POST /mcp HTTP/1.1
-Host: localhost:8080
-MCP-Protocol-Version: 2025-06-18
-Content-Type: application/json
-```
-
 ## 認證
 
 PieKBS 支援兩種認證方式：
