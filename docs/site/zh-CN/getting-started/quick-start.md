@@ -24,14 +24,14 @@ piekbs serve   # 启动服务：MCP + Web UI + 文件监听
       "type": "http",
       "url": "http://127.0.0.1:8766/mcp",
       "headers": {
-        "x-api-key": "${PIEKBS_API_KEY}"
+        "Authorization": "Bearer ${PIEKBS_API_KEY}"
       }
     }
   }
 }
 ```
 
-`x-api-key` 对应 `config.yaml` 中的 `server.api_key`，未设置 api_key 时可省略 `headers`。
+使用 `Authorization: Bearer`（推荐）或 `x-api-key`（已弃用）进行认证。密钥对应 `config.yaml` 中的 `server.api_key`，未配置时可省略 `headers`。
 
 **stdio 模式**（适用于托管环境）：
 
