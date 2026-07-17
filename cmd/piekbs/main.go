@@ -167,6 +167,79 @@ func lastKnownTime(kbRoot string) time.Time {
 	return readTimestamp(filepath.Join(kbRoot, runningFile))
 }
 
+// shutdown performs the graceful shutdown sequence: close DB, write
+// .last_shutdown timestamp, remove .running marker, then exit.
+// Called from signal handlers and tray quit action.
+func shutdown(kbRoot string) {
+	kb.CloseGlobalDB()
+	writeTimestamp(filepath.Join(kbRoot, lastShutdownFile))
+	_ = os.Remove(filepath.Join(kbRoot, runningFile))
+	os.Exit(0)
+}
+
+// startHeartbeat launches a goroutine that updates the .running timestamp
+// every hour so crash detection can distinguish "running" from "stale".
+func startHeartbeat(kbRoot string) {
+	go func() {
+		t := time.NewTicker(heartbeatInterval)
+		defer t.Stop()
+		for range t.C {
+			writeTimestamp(filepath.Join(kbRoot, runningFile))
+		}
+	}()
+}
+
+// startSignalHandler launches a goroutine that calls shutdown on SIGINT/SIGTERM.
+func startSignalHandler(kbRoot string) {
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		shutdown(kbRoot)
+	}()
+}
+
+// startServices initializes all background services: GlobalDB, catch-up scan,
+// file watcher, stale-task recovery, and distill worker pool.
+// Returns cancelWorkers — call it before exit to stop the distill pool.
+func startServices(kbRoot string, cfg *config.Config) (context.CancelFunc, error) {
+	// GlobalDB singleton
+	db, err := kb.GlobalDB(kbRoot)
+	if err != nil {
+		return nil, fmt.Errorf("initialize database: %w", err)
+	}
+
+	// Catch-up: index + distill files newer than last known time.
+	since := lastKnownTime(kbRoot)
+	if !since.IsZero() {
+		go func() { catchUpFn(kbRoot, since, cfg) }()
+	}
+
+	// File watcher in background.
+	go func() {
+		if err := watcher.Watch(kbRoot, reindexFn); err != nil {
+			log.Printf("watcher: %v", err)
+		}
+	}()
+
+	// Recover stale processing tasks from previous crash.
+	_ = distill.RecoverStale(db)
+
+	// Start distill worker pool.
+	workerCtx, cancel := context.WithCancel(context.Background())
+	if cfg.Distill.IsConfigured() {
+		distillCfg := cfg.Distill.LLMConfig
+		n := cfg.Distill.Workers
+		if n <= 0 {
+			n = 3
+		}
+		go distill.RunWorkers(workerCtx, distillCfg, kbRoot, n)
+		log.Printf("distill: started %d worker(s)", n)
+	}
+
+	return cancel, nil
+}
+
 // ── serve ──────────────────────────────────────────────────────────────────────
 
 // preflightCheck inspects the runtime environment for common misconfigurations
@@ -288,65 +361,17 @@ func runStdio(kbRoot string) error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	since := lastKnownTime(kbRoot)
 	writeTimestamp(filepath.Join(kbRoot, runningFile))
 	_ = os.Remove(filepath.Join(kbRoot, lastShutdownFile))
 
-	go func() {
-		t := time.NewTicker(heartbeatInterval)
-		defer t.Stop()
-		for range t.C {
-			writeTimestamp(filepath.Join(kbRoot, runningFile))
-		}
-	}()
+	startHeartbeat(kbRoot)
+	startSignalHandler(kbRoot)
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigCh
-		kb.CloseGlobalDB()
-		writeTimestamp(filepath.Join(kbRoot, lastShutdownFile))
-		_ = os.Remove(filepath.Join(kbRoot, runningFile))
-		os.Exit(0)
-	}()
-
-	// 初始化全局数据库单例
-	if _, err := kb.GlobalDB(kbRoot); err != nil {
-		return fmt.Errorf("initialize database: %w", err)
+	cancelWorkers, err := startServices(kbRoot, cfg)
+	if err != nil {
+		return err
 	}
-
-	if !since.IsZero() {
-		go func() { catchUpFn(kbRoot, since, cfg) }()
-	}
-
-	go func() {
-		if err := watcher.Watch(kbRoot, reindexFn); err != nil {
-			log.Printf("watcher: %v", err)
-		}
-	}()
-
-	// Recover stale processing tasks from previous crash.
-	if db, err := kb.GlobalDB(kbRoot); err == nil {
-		_ = distill.RecoverStale(db)
-	}
-
-	// Start distill worker pool.
-	workerCtx, cancelWorkers := context.WithCancel(context.Background())
 	defer cancelWorkers()
-	if cfg.Distill.IsConfigured() {
-		distillCfg := distill.Config{
-			BaseURL: cfg.Distill.BaseURL,
-			Token:   cfg.Distill.Token,
-			Model:   cfg.Distill.Model,
-			APIType: cfg.Distill.APIType,
-		}
-		n := cfg.Distill.Workers
-		if n <= 0 {
-			n = 3
-		}
-		go distill.RunWorkers(workerCtx, distillCfg, kbRoot, n)
-		log.Printf("distill: started %d worker(s)", n)
-	}
 
 	log.Printf("PieKBS stdio MCP starting (kb: %s)", kbRoot)
 	return mcp.ServeStdio(kbRoot, cfg.Server.APIKey)
@@ -368,75 +393,17 @@ func runServe(kbRoot string) error {
 		return err
 	}
 
-	// Determine if we need a catch-up scan (new files added while down).
-	since := lastKnownTime(kbRoot)
-
-	// Write .running marker immediately.
 	writeTimestamp(filepath.Join(kbRoot, runningFile))
-	// Remove stale .last_shutdown so next crash uses .running.
 	_ = os.Remove(filepath.Join(kbRoot, lastShutdownFile))
 
-	// Heartbeat: update .running timestamp every hour.
-	go func() {
-		t := time.NewTicker(heartbeatInterval)
-		defer t.Stop()
-		for range t.C {
-			writeTimestamp(filepath.Join(kbRoot, runningFile))
-		}
-	}()
+	startHeartbeat(kbRoot)
+	startSignalHandler(kbRoot)
 
-	// Graceful shutdown: write .last_shutdown and remove .running.
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigCh
-		kb.CloseGlobalDB()
-		writeTimestamp(filepath.Join(kbRoot, lastShutdownFile))
-		_ = os.Remove(filepath.Join(kbRoot, runningFile))
-		os.Exit(0)
-	}()
-
-	// 初始化全局数据库单例
-	if _, err := kb.GlobalDB(kbRoot); err != nil {
-		return fmt.Errorf("initialize database: %w", err)
+	cancelWorkers, err := startServices(kbRoot, cfg)
+	if err != nil {
+		return err
 	}
-
-	// Catch-up: index + distill only files newer than last known time.
-	if !since.IsZero() {
-		go func() {
-			catchUpFn(kbRoot, since, cfg)
-		}()
-	}
-
-	// File watcher in background.
-	go func() {
-		if err := watcher.Watch(kbRoot, reindexFn); err != nil {
-			log.Printf("watcher: %v", err)
-		}
-	}()
-
-	// Recover stale processing tasks from previous crash.
-	if db, err := kb.GlobalDB(kbRoot); err == nil {
-		_ = distill.RecoverStale(db)
-	}
-
-	// Start distill worker pool.
-	workerCtx, cancelWorkers := context.WithCancel(context.Background())
 	defer cancelWorkers()
-	if cfg.Distill.IsConfigured() {
-		distillCfg := distill.Config{
-			BaseURL: cfg.Distill.BaseURL,
-			Token:   cfg.Distill.Token,
-			Model:   cfg.Distill.Model,
-			APIType: cfg.Distill.APIType,
-		}
-		n := cfg.Distill.Workers
-		if n <= 0 {
-			n = 3
-		}
-		go distill.RunWorkers(workerCtx, distillCfg, kbRoot, n)
-		log.Printf("distill: started %d worker(s)", n)
-	}
 
 	// Combine MCP and Web UI on the same mux.
 	mux := http.NewServeMux()
@@ -462,10 +429,7 @@ func runServe(kbRoot string) error {
 		go func() {
 			for action := range actionCh {
 				if action == tray.ActionQuit {
-					kb.CloseGlobalDB()
-					writeTimestamp(filepath.Join(kbRoot, lastShutdownFile))
-					_ = os.Remove(filepath.Join(kbRoot, runningFile))
-					os.Exit(0)
+					shutdown(kbRoot)
 				}
 			}
 		}()
@@ -523,7 +487,7 @@ func catchUpFn(kbRoot string, since time.Time, cfg *config.Config) {
 	}
 	log.Printf("catch-up: %d files indexed", n)
 
-	if cfg.Distill.BaseURL != "" && cfg.Distill.Token != "" && cfg.Distill.Model != "" {
+	if cfg.Distill.IsConfigured() {
 		if eq, eqErr := distill.Enqueue(db, kbRoot); eqErr != nil {
 			log.Printf("catch-up enqueue: %v", eqErr)
 		} else if eq > 0 {
@@ -648,27 +612,24 @@ func runContext(kbRoot string, args []string) error {
 		return fmt.Errorf("open db: %w", err)
 	}
 
-	bundle := kb.BuildContext(db, kbRoot, question, nil, 5) //nolint — CLI path uses FTS-only (no embedder)
+	wikiLayer := "wiki"
+	results, _, err := kb.SearchLayered(db, kbRoot, question, &wikiLayer, nil, 5, 0)
+	if err != nil {
+		return fmt.Errorf("search: %w", err)
+	}
 
-	fmt.Printf("Question: %s\n\n", bundle.Question)
+	fmt.Printf("Question: %s\n\n", question)
 
-	if len(bundle.WikiPages) == 0 {
+	if len(results) == 0 {
 		fmt.Println("No wiki pages found.")
 		return nil
 	}
 
-	fmt.Printf("Wiki pages (%d):\n", len(bundle.WikiPages))
-	for _, wp := range bundle.WikiPages {
-		fmt.Printf("  - [%s] %s\n", wp.Layer, wp.Title)
-		if wp.Description != "" {
-			fmt.Printf("    %s\n", wp.Description)
-		}
-	}
-
-	if len(bundle.RawSources) > 0 {
-		fmt.Printf("\nRaw sources (%d):\n", len(bundle.RawSources))
-		for _, rs := range bundle.RawSources {
-			fmt.Printf("  - %s\n", rs.Title)
+	fmt.Printf("Wiki pages (%d):\n", len(results))
+	for _, r := range results {
+		fmt.Printf("  - [%s] %s\n", r.Layer, r.Title)
+		if r.Description != "" {
+			fmt.Printf("    %s\n", r.Description)
 		}
 	}
 
@@ -701,12 +662,7 @@ func runSynthesize(kbRoot string, args []string) error {
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
-	synCfg := synthesize.Config{
-		BaseURL: cfg.Distill.BaseURL,
-		Token:   cfg.Distill.Token,
-		Model:   cfg.Distill.Model,
-		APIType: cfg.Distill.APIType,
-	}
+	synCfg := cfg.Distill.LLMConfig
 
 	if gaps {
 		return runSynthesizeGaps(kbRoot, synCfg, topic)

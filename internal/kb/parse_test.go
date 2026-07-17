@@ -65,6 +65,61 @@ func TestParseMarkdownFile_NoFrontmatter(t *testing.T) {
 	}
 }
 
+func TestSetFrontmatterSources(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		sources []string
+		want    string
+	}{
+		{
+			name:    "empty sources returns unchanged",
+			input:   "---\ntitle: foo\n---\nbody",
+			sources: []string{},
+			want:    "---\ntitle: foo\n---\nbody",
+		},
+		{
+			name:    "no frontmatter returns unchanged",
+			input:   "no frontmatter here",
+			sources: []string{"raw/a.md"},
+			want:    "no frontmatter here",
+		},
+		{
+			name:    "inline sources replaced with block",
+			input:   "---\ntitle: foo\nsources: [old.md]\n---\nbody",
+			sources: []string{"new.md"},
+			want:    "---\ntitle: foo\nsources:\n  - new.md\n---\nbody",
+		},
+		{
+			name:    "block sources replaced",
+			input:   "---\ntitle: foo\nsources:\n  - old1.md\n  - old2.md\n---\nbody",
+			sources: []string{"new.md"},
+			want:    "---\ntitle: foo\nsources:\n  - new.md\n---\nbody",
+		},
+		{
+			name:    "no existing sources field adds it",
+			input:   "---\ntitle: foo\n---\nbody",
+			sources: []string{"raw/a.md"},
+			want:    "---\ntitle: foo\nsources:\n  - raw/a.md\n---\nbody",
+		},
+		{
+			name:    "multiple sources",
+			input:   "---\ntitle: foo\n---\nbody",
+			sources: []string{"raw/a.md", "raw/b.md"},
+			want:    "---\ntitle: foo\nsources:\n  - raw/a.md\n  - raw/b.md\n---\nbody",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := SetFrontmatterSources(tt.input, tt.sources)
+			if got != tt.want {
+				t.Errorf("SetFrontmatterSources(%q, %v)\ngot:\n%s\nwant:\n%s", tt.input, tt.sources, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestParseYAMLSimple(t *testing.T) {
 	text := `title: My Title
 type: concept

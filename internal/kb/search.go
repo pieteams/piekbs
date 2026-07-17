@@ -408,6 +408,14 @@ func multiKindFTS(db *sql.DB, query string, layer, kind *string, limit int) ([]S
 
 func strPtr(s string) *string { return &s }
 
+func isSynthesizedKind(kind string) bool {
+	switch kind {
+	case "concept", "comparison", "decision", "wiki-concept", "wiki-comparison", "wiki-decision":
+		return true
+	}
+	return false
+}
+
 // SearchLayered runs FTS search and returns source-notes and synthesized pages
 // in separate quota pools. sourceLimit caps source-note results; synthLimit caps
 // concept/comparison/decision results. Related docs are attached to each result.

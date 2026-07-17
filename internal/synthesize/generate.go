@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pieteams/piekbs/internal/kb"
 )
 
 // Generate reads the source-note content for each plan entry, calls the LLM,
@@ -368,45 +370,10 @@ func generateAndWrite(cfg Config, kbRoot, dest string, p PagePlan) error {
 
 // overrideSources replaces the sources frontmatter field with the canonical
 // paths from the plan, preventing LLM path drift (e.g. spaces vs hyphens).
+// overrideSources replaces the sources frontmatter field with the canonical
+// paths from the plan, preventing LLM path drift.
 func overrideSources(content string, sources []string) string {
-	if len(sources) == 0 || !strings.HasPrefix(content, "---\n") {
-		return content
-	}
-	end := strings.Index(content[4:], "\n---")
-	if end < 0 {
-		return content
-	}
-	fmEnd := 4 + end
-	fm := content[4:fmEnd]
-	rest := content[fmEnd:]
-
-	// Remove existing sources block.
-	var out []string
-	skipping := false
-	for _, line := range strings.Split(fm, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if skipping {
-			if strings.HasPrefix(trimmed, "- ") || trimmed == "-" {
-				continue
-			}
-			skipping = false
-		}
-		if val, ok := strings.CutPrefix(trimmed, "sources:"); ok {
-			if strings.TrimSpace(val) == "" {
-				skipping = true
-			}
-			continue
-		}
-		out = append(out, line)
-	}
-
-	// Build canonical sources block.
-	var srcLines []string
-	for _, s := range sources {
-		srcLines = append(srcLines, "  - "+s)
-	}
-	newFM := strings.TrimRight(strings.Join(out, "\n"), "\n")
-	return "---\n" + newFM + "\nsources:\n" + strings.Join(srcLines, "\n") + rest
+	return kb.SetFrontmatterSources(content, sources)
 }
 
 // RunIncremental triggers synthesize for a single newly-distilled source-note.

@@ -13,24 +13,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pieteams/piekbs/internal/config"
 	"github.com/pieteams/piekbs/internal/llmurl"
 )
 
-// Config holds LLM API configuration (shared with distill).
-type Config struct {
-	BaseURL string
-	Token   string
-	Model   string
-	APIType string // "openai" (default) or "anthropic"
-}
-
-func (c Config) IsConfigured() bool {
-	return c.BaseURL != "" && c.Token != "" && c.Model != ""
-}
-
-func (c Config) isAnthropic() bool {
-	return strings.EqualFold(c.APIType, "anthropic")
-}
+// Config is an alias for config.LLMConfig, preserving API compatibility.
+type Config = config.LLMConfig
 
 // PagePlan describes one wiki page the LLM proposes to generate.
 type PagePlan struct {
@@ -155,7 +143,7 @@ Begin directly with the YAML frontmatter (---).`, pageType)
 
 // callLLM dispatches to Anthropic or OpenAI wire format based on cfg.APIType.
 func callLLM(cfg Config, system, userContent string) (string, error) {
-	if cfg.isAnthropic() {
+	if cfg.IsAnthropic() {
 		return callAnthropicAPI(cfg, system, userContent)
 	}
 	return callOpenAIAPI(cfg, system, userContent)
@@ -246,9 +234,10 @@ func callOpenAIAPI(cfg Config, system, userContent string) (string, error) {
 	return res.Choices[0].Message.Content, nil
 }
 
+var llmClient = &http.Client{Timeout: 120 * time.Second}
+
 func doRequest(req *http.Request) ([]byte, error) {
-	client := &http.Client{Timeout: 120 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := llmClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

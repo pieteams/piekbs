@@ -187,6 +187,63 @@ func TestSetUIField_RejectsLegacyZh(t *testing.T) {
 	}
 }
 
+func TestLLMConfig_IsConfigured(t *testing.T) {
+	c := LLMConfig{BaseURL: "http://x", Token: "t", Model: "m"}
+	if !c.IsConfigured() {
+		t.Error("expected IsConfigured true for fully populated config")
+	}
+	c2 := LLMConfig{BaseURL: "http://x", Token: "t"}
+	if c2.IsConfigured() {
+		t.Error("expected IsConfigured false when Model is empty")
+	}
+	c3 := LLMConfig{}
+	if c3.IsConfigured() {
+		t.Error("expected IsConfigured false for empty config")
+	}
+}
+
+func TestLLMConfig_IsAnthropic(t *testing.T) {
+	c := LLMConfig{APIType: "Anthropic"}
+	if !c.IsAnthropic() {
+		t.Error("expected IsAnthropic true for 'Anthropic'")
+	}
+	c2 := LLMConfig{APIType: "openai"}
+	if c2.IsAnthropic() {
+		t.Error("expected IsAnthropic false for 'openai'")
+	}
+	c3 := LLMConfig{}
+	if c3.IsAnthropic() {
+		t.Error("expected IsAnthropic false for empty APIType")
+	}
+}
+
+func TestDistillConfig_EmbedsLLMConfig(t *testing.T) {
+	cfg := &Config{}
+	cfg.Distill.BaseURL = "http://x"
+	cfg.Distill.Token = "t"
+	cfg.Distill.Model = "m"
+	cfg.Distill.APIType = "anthropic"
+	cfg.Distill.Workers = 5
+
+	// Field promotion: BaseURL/Token/Model/APIType accessible via Distill
+	if cfg.Distill.BaseURL != "http://x" {
+		t.Errorf("field promotion failed for BaseURL")
+	}
+	if !cfg.Distill.IsConfigured() {
+		t.Error("IsConfigured should work via embedded LLMConfig")
+	}
+	if !cfg.Distill.IsAnthropic() {
+		t.Error("IsAnthropic should work via embedded LLMConfig")
+	}
+	if cfg.Distill.Workers != 5 {
+		t.Errorf("Workers = %d, want 5", cfg.Distill.Workers)
+	}
+	// Direct LLMConfig access
+	if cfg.Distill.LLMConfig.BaseURL != "http://x" {
+		t.Error("LLMConfig.BaseURL should be accessible directly")
+	}
+}
+
 func TestLoad_MigratesOldZh(t *testing.T) {
 	dir := t.TempDir()
 	cfgPath := filepath.Join(dir, "config.yaml")

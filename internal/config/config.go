@@ -53,17 +53,27 @@ type ServerConfig struct {
 	APIKey string
 }
 
-type DistillConfig struct {
+// LLMConfig holds LLM API credentials shared by distill and synthesize.
+type LLMConfig struct {
 	BaseURL string
 	Token   string
 	Model   string
 	APIType string // "openai" (default) or "anthropic"
-	Workers int    // concurrent distill workers (default 3)
 }
 
 // IsConfigured returns true when all three LLM fields are non-empty.
-func (c DistillConfig) IsConfigured() bool {
+func (c LLMConfig) IsConfigured() bool {
 	return c.BaseURL != "" && c.Token != "" && c.Model != ""
+}
+
+// IsAnthropic returns true when APIType is "anthropic" (case-insensitive).
+func (c LLMConfig) IsAnthropic() bool {
+	return strings.EqualFold(c.APIType, "anthropic")
+}
+
+type DistillConfig struct {
+	LLMConfig        // embed: BaseURL, Token, Model, APIType
+	Workers int      // concurrent distill workers (default 3)
 }
 
 type EmbeddingConfig struct {

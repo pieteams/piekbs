@@ -196,3 +196,45 @@ func asStringList(v interface{}) []string {
 	}
 	return nil
 }
+
+// SetFrontmatterSources rewrites the sources: field in YAML frontmatter
+// to the given list. Existing sources (inline or block form) are removed.
+// If frontmatter is absent or sources is empty, text is returned unchanged.
+func SetFrontmatterSources(text string, sources []string) string {
+	if len(sources) == 0 || !strings.HasPrefix(text, "---\n") {
+		return text
+	}
+	end := strings.Index(text[4:], "\n---")
+	if end < 0 {
+		return text
+	}
+	fmEnd := 4 + end
+	// fmEnd points at the '\n' before closing '---'; rest skips '\n---\n'
+	fm, rest := text[4:fmEnd], text[fmEnd+4:]
+
+	var out []string
+	skipping := false
+	for _, line := range strings.Split(fm, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if skipping {
+			if strings.HasPrefix(trimmed, "- ") || trimmed == "-" {
+				continue
+			}
+			skipping = false
+		}
+		if val, ok := strings.CutPrefix(trimmed, "sources:"); ok {
+			if strings.TrimSpace(val) == "" {
+				skipping = true
+			}
+			continue
+		}
+		out = append(out, line)
+	}
+
+	var srcLines []string
+	for _, s := range sources {
+		srcLines = append(srcLines, "  - "+s)
+	}
+	newFM := strings.TrimRight(strings.Join(out, "\n"), "\n")
+	return "---\n" + newFM + "\nsources:\n" + strings.Join(srcLines, "\n") + "\n---" + rest
+}
