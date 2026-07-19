@@ -14,6 +14,8 @@ import (
 
 	"github.com/pieteams/piekbs/internal/config"
 	"github.com/pieteams/piekbs/internal/kb"
+	"github.com/pieteams/piekbs/internal/kbinit"
+	"github.com/pieteams/piekbs/internal/version"
 )
 
 // kbErrToHTTP writes the appropriate HTTP status code and JSON error body.
@@ -214,6 +216,39 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// handleSchemaStatus returns the current binary version and the KB's
+// schema_version, plus an outdated flag. GET /api/schema/status.
+func (s *Server) handleSchemaStatus(w http.ResponseWriter, r *http.Request) {
+	cfg, err := config.Load(s.kbRoot)
+	if err != nil {
+		kbErrToHTTP(w, err)
+		return
+	}
+	writeJSON(w, map[string]interface{}{
+		"current_version": version.Version,
+		"schema_version":  cfg.SchemaVersion,
+		"outdated":        cfg.SchemaVersion != version.Version,
+	})
+}
+
+// handleSchemaUpgrade overwrites bundled schema files and bumps the KB's
+// schema_version to the current binary version. POST /api/schema/upgrade.
+func (s *Server) handleSchemaUpgrade(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST required", http.StatusMethodNotAllowed)
+		return
+	}
+	updated, err := kbinit.UpgradeSchema(s.kbRoot)
+	if err != nil {
+		kbErrToHTTP(w, err)
+		return
+	}
+	writeJSON(w, map[string]interface{}{
+		"updated":         updated,
+		"current_version": version.Version,
+	})
 }
 
 // writeJSON encodes v as JSON and writes it to w with Content-Type application/json.

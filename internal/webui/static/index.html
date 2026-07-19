@@ -14,6 +14,11 @@
     <a href="/settings" data-i18n="nav.settings">Settings</a>
 </nav>
 <div class="container">
+    <div id="schema-banner" style="display:none; background:#fff8e1; border-left:4px solid #f5a623; padding:8px 16px; margin:8px 0; border-radius:4px; font-size:14px;">
+        <span id="schema-banner-text"></span>
+        <button id="schema-upgrade-btn" onclick="upgradeSchema()" style="margin-left:12px; padding:4px 12px; cursor:pointer;">升级 Schema</button>
+        <button onclick="document.getElementById('schema-banner').style.display='none'" style="margin-left:4px; padding:4px 12px; cursor:pointer;">忽略</button>
+    </div>
     <div class="card" id="status-card">
         <h2 data-i18n="status.title">Knowledge Base Status</h2>
         <div class="status-row" id="kind-grid" style="display:none">
@@ -284,6 +289,35 @@ async function applyI18n() {
 }
 
 document.addEventListener("DOMContentLoaded", applyI18n);
+</script>
+
+<script>
+async function checkSchemaVersion() {
+    try {
+        const r = await fetch('/api/schema/status');
+        const d = await r.json();
+        if (d.outdated) {
+            document.getElementById('schema-banner-text').textContent =
+                '⚠ Schema 已过期 (' + d.schema_version + ' → ' + d.current_version + ') — 您的 KB schema 落后于当前版本。';
+            document.getElementById('schema-banner').style.display = 'block';
+        }
+    } catch(e) {}
+}
+async function upgradeSchema() {
+    const btn = document.getElementById('schema-upgrade-btn');
+    btn.textContent = '升级中...';
+    btn.disabled = true;
+    try {
+        const r = await fetch('/api/schema/upgrade', {method: 'POST'});
+        const d = await r.json();
+        btn.textContent = '完成 (' + d.updated.length + ' 文件)';
+        setTimeout(() => document.getElementById('schema-banner').style.display = 'none', 2000);
+    } catch(e) {
+        btn.textContent = '失败: ' + e.message;
+        btn.disabled = false;
+    }
+}
+checkSchemaVersion();
 </script>
 </body>
 </html>

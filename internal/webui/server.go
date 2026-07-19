@@ -72,6 +72,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/upload", s.handleUpload)
 	mux.HandleFunc("/api/import-lark", s.handleImportLark)
 	mux.HandleFunc("/api/settings", s.handleSettings)
+	mux.HandleFunc("/api/schema/status", s.handleSchemaStatus)
+	mux.HandleFunc("/api/schema/upgrade", s.handleSchemaUpgrade)
 
 	return mux
 }
