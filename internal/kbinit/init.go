@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/pieteams/piekbs/internal/config"
+	"github.com/pieteams/piekbs/internal/kb"
 	"github.com/pieteams/piekbs/internal/version"
 )
 
@@ -114,6 +115,11 @@ func UpgradeSchema(kbRoot string) ([]string, error) {
 	cfg.SchemaVersion = version.Version
 	if err := config.Save(kbRoot, cfg); err != nil {
 		return nil, fmt.Errorf("save config: %w", err)
+	}
+
+	// Reindex so schema files are searchable via FTS.
+	if _, err := kb.KBReindex(kbRoot, false); err != nil {
+		return updated, fmt.Errorf("reindex after upgrade: %w", err)
 	}
 
 	return updated, nil
