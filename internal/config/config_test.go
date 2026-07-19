@@ -261,3 +261,20 @@ func TestLoad_MigratesOldZh(t *testing.T) {
 		t.Errorf("config.yaml should be updated to zh-CN, got:\n%s", data)
 	}
 }
+
+func TestConfigSchemaVersionRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	cfg := &Config{}
+	cfg.SchemaVersion = "0.4.7"
+
+	if err := Save(dir, cfg); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.SchemaVersion != "0.4.7" {
+		t.Errorf("SchemaVersion = %q, want %q", loaded.SchemaVersion, "0.4.7")
+	}
+}

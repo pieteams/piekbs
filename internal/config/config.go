@@ -31,11 +31,12 @@ type SettingsRequest struct {
 }
 
 type Config struct {
-	Server    ServerConfig
-	Distill   DistillConfig
-	Embedding EmbeddingConfig
-	Runtime   RuntimeConfig
-	UI        UIConfig
+	Server        ServerConfig
+	Distill       DistillConfig
+	Embedding     EmbeddingConfig
+	Runtime       RuntimeConfig
+	UI            UIConfig
+	SchemaVersion string `json:"schema_version"`
 }
 
 type UIConfig struct {
@@ -245,6 +246,9 @@ func parseYAML(path string, cfg *Config) error {
 				section = key
 			} else {
 				section = ""
+				if key == "schema_version" {
+					cfg.SchemaVersion = val
+				}
 			}
 		}
 	}
@@ -344,6 +348,9 @@ func setUIField(cfg *Config, key, val string) {
 // Values are written unquoted so parseYAML/splitKV can read them back correctly.
 func Save(kbRoot string, cfg *Config) error {
 	var b strings.Builder
+	if cfg.SchemaVersion != "" {
+		fmt.Fprintf(&b, "schema_version: %q\n", cfg.SchemaVersion)
+	}
 	b.WriteString("server:\n")
 	fmt.Fprintf(&b, "  host: %q\n", cfg.Server.Host)
 	fmt.Fprintf(&b, "  port: %d\n", cfg.Server.Port)
