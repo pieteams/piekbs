@@ -240,7 +240,7 @@ func (s *Server) handleSchemaUpgrade(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "POST required", http.StatusMethodNotAllowed)
 		return
 	}
-	updated, err := kbinit.UpgradeSchema(s.kbRoot)
+	updated, _, err := kbinit.UpgradeSchema(s.kbRoot)
 	if err != nil {
 		kbErrToHTTP(w, err)
 		return

@@ -141,17 +141,12 @@ func runImportLark(kbRoot string, args []string) error {
 }
 
 func runSchemaUpgrade(kbRoot string) error {
-	cfg, err := config.Load(kbRoot)
-	if err != nil {
-		return fmt.Errorf("load config: %w", err)
-	}
-	fmt.Printf("正在升级 schema %s → %s...\n", cfg.SchemaVersion, version.Version)
-
-	updated, err := kbinit.UpgradeSchema(kbRoot)
+	updated, oldVersion, err := kbinit.UpgradeSchema(kbRoot)
 	if err != nil {
 		return fmt.Errorf("upgrade schema: %w", err)
 	}
 
+	fmt.Printf("正在升级 schema %s → %s...\n", oldVersion, version.Version)
 	for _, f := range updated {
 		fmt.Printf("  已更新: schema/%s\n", f)
 	}

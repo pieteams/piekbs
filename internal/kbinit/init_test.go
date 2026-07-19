@@ -69,9 +69,12 @@ func TestUpgradeSchema(t *testing.T) {
 
 	// Change version and upgrade.
 	version.Version = "3.0.0"
-	updated, err := UpgradeSchema(dir)
+	updated, oldVer, err := UpgradeSchema(dir)
 	if err != nil {
 		t.Fatalf("UpgradeSchema: %v", err)
+	}
+	if oldVer != "2.0.0" {
+		t.Errorf("oldVersion = %q, want %q", oldVer, "2.0.0")
 	}
 
 	if len(updated) == 0 {

@@ -28,8 +28,70 @@ func Init(kbRoot string, force bool) error {
 		}
 	}
 
-	// Copy bundled schema files into kbRoot/schema/.
-	if err := fs.WalkDir(schemaFS, "schema", func(path string, d fs.DirEntry, err error) error {
+	if err := writeSchemaFiles(kbRoot, force); err != nil {
+		return err
+	}
+
+	// Write current PieKBS version as schema_version.
+	cfg, err := config.Load(kbRoot)
+	if err != nil {
+		return fmt.Errorf("load config for schema_version: %w", err)
+	}
+	if cfg.SchemaVersion == "" {
+		cfg.SchemaVersion = version.Version
+		if err := config.Save(kbRoot, cfg); err != nil {
+			return fmt.Errorf("save schema_version: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// UpgradeSchema overwrites all schema files from the embedded FS and updates
+// the schema_version in config.yaml to the current binary version.
+// Returns the list of updated file paths relative to schema/ and the previous schema version.
+func UpgradeSchema(kbRoot string) ([]string, string, error) {
+	// Read previous version before overwriting.
+	oldCfg, err := config.Load(kbRoot)
+	if err != nil {
+		return nil, "", fmt.Errorf("load config: %w", err)
+	}
+	oldVersion := oldCfg.SchemaVersion
+
+	if err := writeSchemaFiles(kbRoot, true); err != nil {
+		return nil, oldVersion, err
+	}
+
+	// Collect updated file list.
+	schemaDir := filepath.Join(kbRoot, "schema")
+	var updated []string
+	_ = fs.WalkDir(schemaFS, "schema", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		rel, _ := filepath.Rel(schemaDir, filepath.Join(kbRoot, path))
+		updated = append(updated, rel)
+		return nil
+	})
+
+	// Update schema_version in config.
+	oldCfg.SchemaVersion = version.Version
+	if err := config.Save(kbRoot, oldCfg); err != nil {
+		return nil, oldVersion, fmt.Errorf("save config: %w", err)
+	}
+
+	// Reindex so schema files are searchable via FTS.
+	if _, err := kb.KBReindex(kbRoot, false); err != nil {
+		return updated, oldVersion, fmt.Errorf("reindex after upgrade: %w", err)
+	}
+
+	return updated, oldVersion, nil
+}
+
+// writeSchemaFiles copies all embedded schema files into kbRoot/schema/.
+// If force is false, existing files are skipped.
+func writeSchemaFiles(kbRoot string, force bool) error {
+	return fs.WalkDir(schemaFS, "schema", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -54,73 +116,5 @@ func Init(kbRoot string, force bool) error {
 		}
 
 		return os.WriteFile(dest, data, 0o644)
-	}); err != nil {
-		return err
-	}
-
-	// Write current PieKBS version as schema_version.
-	cfg, err := config.Load(kbRoot)
-	if err != nil {
-		return fmt.Errorf("load config for schema_version: %w", err)
-	}
-	if cfg.SchemaVersion == "" {
-		cfg.SchemaVersion = version.Version
-		if err := config.Save(kbRoot, cfg); err != nil {
-			return fmt.Errorf("save schema_version: %w", err)
-		}
-	}
-
-	return nil
-}
-
-// UpgradeSchema overwrites all schema files from the embedded FS and updates
-// the schema_version in config.yaml to the current binary version.
-// Returns the list of updated file paths relative to schema/.
-func UpgradeSchema(kbRoot string) ([]string, error) {
-	schemaDir := filepath.Join(kbRoot, "schema")
-
-	// Overwrite all embedded schema files.
-	var updated []string
-	err := fs.WalkDir(schemaFS, "schema", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return os.MkdirAll(filepath.Join(kbRoot, path), 0o755)
-		}
-		data, err := fs.ReadFile(schemaFS, path)
-		if err != nil {
-			return err
-		}
-		dest := filepath.Join(kbRoot, path)
-		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
-			return err
-		}
-		if err := os.WriteFile(dest, data, 0o644); err != nil {
-			return err
-		}
-		rel, _ := filepath.Rel(schemaDir, filepath.Join(kbRoot, path))
-		updated = append(updated, rel)
-		return nil
 	})
-	if err != nil {
-		return nil, fmt.Errorf("upgrade schema files: %w", err)
-	}
-
-	// Update schema_version in config.
-	cfg, err := config.Load(kbRoot)
-	if err != nil {
-		return nil, fmt.Errorf("load config: %w", err)
-	}
-	cfg.SchemaVersion = version.Version
-	if err := config.Save(kbRoot, cfg); err != nil {
-		return nil, fmt.Errorf("save config: %w", err)
-	}
-
-	// Reindex so schema files are searchable via FTS.
-	if _, err := kb.KBReindex(kbRoot, false); err != nil {
-		return updated, fmt.Errorf("reindex after upgrade: %w", err)
-	}
-
-	return updated, nil
 }
