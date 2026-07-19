@@ -31,6 +31,7 @@ import (
 	"github.com/pieteams/piekbs/internal/service"
 	"github.com/pieteams/piekbs/internal/synthesize"
 	"github.com/pieteams/piekbs/internal/tray"
+	"github.com/pieteams/piekbs/internal/version"
 	"github.com/pieteams/piekbs/internal/watcher"
 	"github.com/pieteams/piekbs/internal/webui"
 )
@@ -102,6 +103,11 @@ func run() error {
 		return runSynthesize(*kbRoot, args[1:])
 	case "import-lark":
 		return runImportLark(*kbRoot, args[1:])
+	case "schema":
+		if len(args) > 0 && args[0] == "upgrade" {
+			return runSchemaUpgrade(*kbRoot)
+		}
+		return fmt.Errorf("usage: piekbs schema upgrade")
 	case "stdio":
 		return runStdio(*kbRoot)
 	default:
@@ -131,6 +137,25 @@ func runImportLark(kbRoot string, args []string) error {
 		fmt.Printf("indexed dataset:  %s (%d unique, %d duplicates removed)\n",
 			result.DatasetPath, result.UniqueRows, result.DuplicatesRemoved)
 	}
+	return nil
+}
+
+func runSchemaUpgrade(kbRoot string) error {
+	cfg, err := config.Load(kbRoot)
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+	fmt.Printf("正在升级 schema %s → %s...\n", cfg.SchemaVersion, version.Version)
+
+	updated, err := kbinit.UpgradeSchema(kbRoot)
+	if err != nil {
+		return fmt.Errorf("upgrade schema: %w", err)
+	}
+
+	for _, f := range updated {
+		fmt.Printf("  已更新: schema/%s\n", f)
+	}
+	fmt.Printf("完成。%d 个文件已更新。\n", len(updated))
 	return nil
 }
 
