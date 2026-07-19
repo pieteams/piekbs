@@ -21,6 +21,7 @@ import (
 	"github.com/pieteams/piekbs/internal/kb"
 	"github.com/pieteams/piekbs/internal/llmurl"
 	"github.com/pieteams/piekbs/internal/synthesize"
+	"github.com/pieteams/piekbs/internal/version"
 )
 
 // Config is an alias for config.LLMConfig, preserving API compatibility.
@@ -606,6 +607,9 @@ func DistillFile(config Config, rawPath, kbRoot string, embedder kb.Embedder) er
 	rawDocID := "raw/" + filepath.ToSlash(rel)
 	generated = SetSourceField(generated, rawDocID)
 
+	// Inject distill_version into frontmatter.
+	generated = injectDistillVersion(generated, version.Version)
+
 	// Strip converted/ prefix: raw/converted/foo/bar.md → source-notes/foo/bar.md
 	noteRel := stripConvertedPrefix(rel)
 	notePath := filepath.Join(kbRoot, "wiki", "source-notes", noteRel)
@@ -631,6 +635,29 @@ func DistillFile(config Config, rawPath, kbRoot string, embedder kb.Embedder) er
 		fmt.Printf("distill: incremental synthesize: %v\n", err)
 	}
 	return nil
+}
+
+// injectDistillVersion adds a distill_version field to the YAML frontmatter.
+// If frontmatter is absent, text is returned unchanged.
+func injectDistillVersion(text, ver string) string {
+	if !strings.HasPrefix(text, "---\n") {
+		return text
+	}
+	end := strings.Index(text[4:], "\n---")
+	if end < 0 {
+		return text
+	}
+	fmEnd := 4 + end
+	fm := text[4:fmEnd]
+	rest := text[fmEnd:]
+
+	// Don't duplicate if already present.
+	if strings.Contains(fm, "distill_version:") {
+		return text
+	}
+
+	newFM := strings.TrimRight(fm, "\n") + "\ndistill_version: " + ver
+	return "---\n" + newFM + rest
 }
 
 // Run finds all undistilled raw files and distills each one.
