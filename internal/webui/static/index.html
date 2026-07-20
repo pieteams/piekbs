@@ -19,6 +19,11 @@
         <button id="schema-upgrade-btn" onclick="upgradeSchema()" style="margin-left:12px; padding:4px 12px; cursor:pointer;">升级 Schema</button>
         <button onclick="document.getElementById('schema-banner').style.display='none'" style="margin-left:4px; padding:4px 12px; cursor:pointer;">忽略</button>
     </div>
+    <div id="outdated-banner" style="display:none; background:#fff3e0; border-left:4px solid #ff9800; padding:8px 16px; margin:8px 0; border-radius:4px; font-size:14px;">
+        <span id="outdated-banner-text"></span>
+        <button id="outdated-refresh-btn" onclick="refreshOutdated()" style="margin-left:12px; padding:4px 12px; cursor:pointer;">重跑过时笔记</button>
+        <button onclick="document.getElementById('outdated-banner').style.display='none'" style="margin-left:4px; padding:4px 12px; cursor:pointer;">忽略</button>
+    </div>
     <div class="card" id="status-card">
         <h2 data-i18n="status.title">Knowledge Base Status</h2>
         <div class="status-row" id="kind-grid" style="display:none">
@@ -318,6 +323,45 @@ async function upgradeSchema() {
     }
 }
 checkSchemaVersion();
+</script>
+<script>
+async function checkOutdated() {
+    try {
+        const resp = await fetch('/api/distill/outdated');
+        const data = await resp.json();
+        const banner = document.getElementById('outdated-banner');
+        const text = document.getElementById('outdated-banner-text');
+        if (data.count > 0) {
+            text.textContent = `⚠ ${data.count} 个笔记需要更新 — distill 版本已过期。`;
+            banner.style.display = 'block';
+        } else {
+            banner.style.display = 'none';
+        }
+    } catch (e) {
+        console.error('check outdated failed:', e);
+    }
+}
+
+async function refreshOutdated() {
+    const btn = document.getElementById('outdated-refresh-btn');
+    btn.disabled = true;
+    btn.textContent = '处理中...';
+    try {
+        const resp = await fetch('/api/distill/refresh-outdated', { method: 'POST' });
+        const data = await resp.json();
+        if (resp.status === 409) {
+            alert('正在处理中，请稍候');
+        } else if (data.errors && data.errors.length > 0) {
+            alert('部分文件处理失败：\n' + data.errors.join('\n'));
+        } else {
+            checkOutdated();
+        }
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '重跑过时笔记';
+    }
+}
+checkOutdated();
 </script>
 </body>
 </html>
