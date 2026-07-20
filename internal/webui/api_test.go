@@ -392,3 +392,27 @@ func TestDistillRefreshOutdated_CleansOrphanNoSource(t *testing.T) {
 		t.Error("orphan wiki file should have been deleted")
 	}
 }
+
+func TestDistillRefreshOutdated_ConflictWhenMutexHeld(t *testing.T) {
+	s, _ := newTestServer(t)
+
+	// Acquire the mutex externally to simulate an in-progress refresh.
+	s.refreshMu.Lock()
+	defer s.refreshMu.Unlock()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/distill/refresh-outdated", nil)
+	w := httptest.NewRecorder()
+	s.handleDistillRefreshOutdated(w, req)
+
+	if w.Code != http.StatusConflict {
+		t.Fatalf("expected 409, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp["error"] != "refresh already in progress" {
+		t.Errorf("expected conflict error message, got %v", resp["error"])
+	}
+}

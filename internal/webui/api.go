@@ -310,7 +310,9 @@ func (s *Server) handleDistillRefreshOutdated(w http.ResponseWriter, r *http.Req
 		if len(parsed.Sources) == 0 || parsed.Sources[0] == "" {
 			// No sources — orphan wiki file. Clean up.
 			os.Remove(absPath)
-			db.Exec("DELETE FROM documents WHERE id = ?", notePath)
+			if _, delErr := db.Exec("DELETE FROM documents WHERE id = ?", notePath); delErr != nil {
+				errs = append(errs, notePath+": delete doc error: "+delErr.Error())
+			}
 			cleaned++
 			continue
 		}
@@ -320,7 +322,9 @@ func (s *Server) handleDistillRefreshOutdated(w http.ResponseWriter, r *http.Req
 		if _, statErr := os.Stat(rawAbsPath); os.IsNotExist(statErr) {
 			// Raw file gone — orphan wiki file. Clean up.
 			os.Remove(absPath)
-			db.Exec("DELETE FROM documents WHERE id = ?", notePath)
+			if _, delErr := db.Exec("DELETE FROM documents WHERE id = ?", notePath); delErr != nil {
+				errs = append(errs, notePath+": delete doc error: "+delErr.Error())
+			}
 			cleaned++
 			continue
 		}
@@ -330,8 +334,14 @@ func (s *Server) handleDistillRefreshOutdated(w http.ResponseWriter, r *http.Req
 			errs = append(errs, notePath+": remove error: "+removeErr.Error())
 			continue
 		}
-		// Strip "raw/" prefix for distill_queue path format.
-		queuePath := strings.TrimPrefix(rawSource, "raw/")
+		// Compute path relative to raw/ directory for distill_queue format.
+		rawDir := filepath.Join(s.kbRoot, "raw")
+		queuePath, relErr := filepath.Rel(rawDir, rawAbsPath)
+		if relErr != nil {
+			errs = append(errs, notePath+": rel error: "+relErr.Error())
+			continue
+		}
+		queuePath = filepath.ToSlash(queuePath)
 		_, insertErr := db.Exec(
 			`INSERT OR IGNORE INTO distill_queue (path, status, retry_count, queued_at, updated_at)
              VALUES (?, 'pending', 0, ?, ?)`,
