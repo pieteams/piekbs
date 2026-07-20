@@ -146,7 +146,7 @@ func runSchemaUpgrade(kbRoot string) error {
 		return fmt.Errorf("upgrade schema: %w", err)
 	}
 
-	fmt.Printf("正在升级 schema %s → %s...\n", oldVersion, version.Version)
+	fmt.Printf("正在升级 schema %d → %s...\n", oldVersion, version.Version)
 	for _, f := range updated {
 		fmt.Printf("  已更新: schema/%s\n", f)
 	}

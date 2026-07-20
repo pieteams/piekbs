@@ -3,21 +3,28 @@
 package kbinit
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/pieteams/piekbs/internal/config"
-	"github.com/pieteams/piekbs/internal/version"
 )
+
+// schemaVersionInt is the value embedded in schema/VERSION.
+// We read it once to keep tests in sync with the embedded file.
+var schemaVersionInt int
+
+func init() {
+	v, err := readSchemaVersion()
+	if err != nil {
+		panic(fmt.Sprintf("readSchemaVersion: %v", err))
+	}
+	schemaVersionInt = v
+}
 
 func TestInitWritesSchemaVersion(t *testing.T) {
 	dir := t.TempDir()
-
-	// Save original version and restore after test.
-	origVer := version.Version
-	version.Version = "1.2.3"
-	t.Cleanup(func() { version.Version = origVer })
 
 	if err := Init(dir, false); err != nil {
 		t.Fatalf("Init: %v", err)
@@ -27,21 +34,21 @@ func TestInitWritesSchemaVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load config: %v", err)
 	}
-	if cfg.SchemaVersion != "1.2.3" {
-		t.Errorf("SchemaVersion = %q, want %q", cfg.SchemaVersion, "1.2.3")
+	want := fmt.Sprintf("%d", schemaVersionInt)
+	if cfg.SchemaVersion != want {
+		t.Errorf("SchemaVersion = %q, want %q", cfg.SchemaVersion, want)
 	}
 }
 
 func TestInitDoesNotOverwriteExistingSchemaVersion(t *testing.T) {
 	dir := t.TempDir()
 
-	// Pre-create config with an existing schema_version.
-	cfg := &config.Config{SchemaVersion: "old"}
+	// Pre-create config with an existing non-zero schema_version.
+	cfg := &config.Config{SchemaVersion: "42"}
 	if err := config.Save(dir, cfg); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 
-	version.Version = "9.9.9"
 	if err := Init(dir, false); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
@@ -50,31 +57,48 @@ func TestInitDoesNotOverwriteExistingSchemaVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load config: %v", err)
 	}
-	if got.SchemaVersion != "old" {
-		t.Errorf("SchemaVersion = %q, want %q (should not overwrite)", got.SchemaVersion, "old")
+	if got.SchemaVersion != "42" {
+		t.Errorf("SchemaVersion = %q, want %q (should not overwrite)", got.SchemaVersion, "42")
+	}
+}
+
+func TestInitOverwritesZeroVersion(t *testing.T) {
+	dir := t.TempDir()
+
+	// Pre-create config with schema_version "0" (treated as unset).
+	cfg := &config.Config{SchemaVersion: "0"}
+	if err := config.Save(dir, cfg); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	if err := Init(dir, false); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+
+	got, err := config.Load(dir)
+	if err != nil {
+		t.Fatalf("Load config: %v", err)
+	}
+	want := fmt.Sprintf("%d", schemaVersionInt)
+	if got.SchemaVersion != want {
+		t.Errorf("SchemaVersion = %q, want %q (should overwrite zero)", got.SchemaVersion, want)
 	}
 }
 
 func TestUpgradeSchema(t *testing.T) {
 	dir := t.TempDir()
 
-	origVer := version.Version
-	version.Version = "2.0.0"
-	t.Cleanup(func() { version.Version = origVer })
-
 	// First init to set up the KB.
 	if err := Init(dir, false); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
 
-	// Change version and upgrade.
-	version.Version = "3.0.0"
 	updated, oldVer, err := UpgradeSchema(dir)
 	if err != nil {
 		t.Fatalf("UpgradeSchema: %v", err)
 	}
-	if oldVer != "2.0.0" {
-		t.Errorf("oldVersion = %q, want %q", oldVer, "2.0.0")
+	if oldVer != schemaVersionInt {
+		t.Errorf("oldVersion = %d, want %d", oldVer, schemaVersionInt)
 	}
 
 	if len(updated) == 0 {
@@ -86,8 +110,9 @@ func TestUpgradeSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load config: %v", err)
 	}
-	if cfg.SchemaVersion != "3.0.0" {
-		t.Errorf("SchemaVersion = %q, want %q", cfg.SchemaVersion, "3.0.0")
+	want := fmt.Sprintf("%d", schemaVersionInt)
+	if cfg.SchemaVersion != want {
+		t.Errorf("SchemaVersion = %q, want %q", cfg.SchemaVersion, want)
 	}
 
 	// Verify at least one schema file exists on disk.

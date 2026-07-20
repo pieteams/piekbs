@@ -138,9 +138,9 @@ func TestDistillFile_WritesLogAndSources(t *testing.T) {
 		t.Errorf("LLM's bogus sources value leaked into note:\n%s", note)
 	}
 
-	// distill_version must be injected into frontmatter.
-	if !strings.Contains(string(note), "distill_version:") {
-		t.Errorf("note missing distill_version:\n%s", note)
+	// schema_version must be injected into frontmatter.
+	if !strings.Contains(string(note), "schema_version:") {
+		t.Errorf("note missing schema_version:\n%s", note)
 	}
 
 	// log.md must contain a greppable ingest entry using the note's title.

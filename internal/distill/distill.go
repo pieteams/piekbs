@@ -17,15 +17,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pieteams/piekbs/internal/config"
+	cfgpkg "github.com/pieteams/piekbs/internal/config"
 	"github.com/pieteams/piekbs/internal/kb"
 	"github.com/pieteams/piekbs/internal/llmurl"
 	"github.com/pieteams/piekbs/internal/synthesize"
-	"github.com/pieteams/piekbs/internal/version"
 )
 
 // Config is an alias for config.LLMConfig, preserving API compatibility.
-type Config = config.LLMConfig
+type Config = cfgpkg.LLMConfig
 
 // stripConvertedPrefix removes a leading "converted/" path segment so that
 // raw/converted/foo/bar.md maps to wiki/source-notes/foo/bar.md.
@@ -607,8 +606,9 @@ func DistillFile(config Config, rawPath, kbRoot string, embedder kb.Embedder) er
 	rawDocID := "raw/" + filepath.ToSlash(rel)
 	generated = SetSourceField(generated, rawDocID)
 
-	// Inject distill_version into frontmatter.
-	generated = injectDistillVersion(generated, version.Version)
+	// Inject schema_version into frontmatter.
+	kbCfg, _ := cfgpkg.Load(kbRoot)
+	generated = injectSchemaVersion(generated, kbCfg.SchemaVersionInt())
 
 	// Strip converted/ prefix: raw/converted/foo/bar.md → source-notes/foo/bar.md
 	noteRel := stripConvertedPrefix(rel)
@@ -637,9 +637,9 @@ func DistillFile(config Config, rawPath, kbRoot string, embedder kb.Embedder) er
 	return nil
 }
 
-// injectDistillVersion adds a distill_version field to the YAML frontmatter.
+// injectSchemaVersion adds a schema_version field to the YAML frontmatter.
 // If frontmatter is absent, text is returned unchanged.
-func injectDistillVersion(text, ver string) string {
+func injectSchemaVersion(text string, ver int) string {
 	if !strings.HasPrefix(text, "---\n") {
 		return text
 	}
@@ -652,11 +652,11 @@ func injectDistillVersion(text, ver string) string {
 	rest := text[fmEnd:]
 
 	// Don't duplicate if already present.
-	if strings.Contains(fm, "distill_version:") {
+	if strings.Contains(fm, "schema_version:") {
 		return text
 	}
 
-	newFM := strings.TrimRight(fm, "\n") + "\ndistill_version: " + ver
+	newFM := strings.TrimRight(fm, "\n") + "\nschema_version: " + strconv.Itoa(ver)
 	return "---\n" + newFM + rest
 }
 

@@ -8,11 +8,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/pieteams/piekbs/internal/config"
 	"github.com/pieteams/piekbs/internal/kb"
-	"github.com/pieteams/piekbs/internal/version"
 )
 
 //go:embed schema/*
@@ -33,13 +33,17 @@ func Init(kbRoot string, force bool) error {
 		return err
 	}
 
-	// Write current PieKBS version as schema_version.
+	schemaVer, err := readSchemaVersion()
+	if err != nil {
+		return fmt.Errorf("read schema version: %w", err)
+	}
+
 	cfg, err := config.Load(kbRoot)
 	if err != nil {
 		return fmt.Errorf("load config for schema_version: %w", err)
 	}
-	if cfg.SchemaVersion == "" {
-		cfg.SchemaVersion = version.Version
+	if cfg.SchemaVersion == "0" || cfg.SchemaVersion == "" || force {
+		cfg.SchemaVersion = strconv.Itoa(schemaVer)
 		if err := config.Save(kbRoot, cfg); err != nil {
 			return fmt.Errorf("save schema_version: %w", err)
 		}
@@ -49,18 +53,23 @@ func Init(kbRoot string, force bool) error {
 }
 
 // UpgradeSchema overwrites all schema files from the embedded FS and updates
-// the schema_version in config.yaml to the current binary version.
+// the schema_version in config.yaml to the current schema VERSION.
 // Returns the list of updated file paths relative to schema/ and the previous schema version.
-func UpgradeSchema(kbRoot string) ([]string, string, error) {
+func UpgradeSchema(kbRoot string) ([]string, int, error) {
 	// Read previous version before overwriting.
 	oldCfg, err := config.Load(kbRoot)
 	if err != nil {
-		return nil, "", fmt.Errorf("load config: %w", err)
+		return nil, 0, fmt.Errorf("load config: %w", err)
 	}
-	oldVersion := oldCfg.SchemaVersion
+	oldVersion := oldCfg.SchemaVersionInt()
 
 	if err := writeSchemaFiles(kbRoot, true); err != nil {
 		return nil, oldVersion, err
+	}
+
+	newVersion, err := readSchemaVersion()
+	if err != nil {
+		return nil, oldVersion, fmt.Errorf("read schema version: %w", err)
 	}
 
 	// Collect updated file list.
@@ -75,15 +84,15 @@ func UpgradeSchema(kbRoot string) ([]string, string, error) {
 		return nil
 	})
 
-	// Update schema_version in config.
-	oldCfg.SchemaVersion = version.Version
+	// Update config.
+	oldCfg.SchemaVersion = strconv.Itoa(newVersion)
 	if err := config.Save(kbRoot, oldCfg); err != nil {
 		return nil, oldVersion, fmt.Errorf("save config: %w", err)
 	}
 
-	// Reindex so schema files are searchable via FTS.
+	// Reindex.
 	if _, err := kb.KBReindex(kbRoot, false); err != nil {
-		return updated, oldVersion, fmt.Errorf("reindex after upgrade: %w", err)
+		return updated, oldVersion, fmt.Errorf("reindex: %w", err)
 	}
 
 	return updated, oldVersion, nil
