@@ -3,6 +3,7 @@
 package kb
 
 import (
+	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
@@ -246,5 +247,31 @@ func TestUpsertDocumentTagsNilClaims(t *testing.T) {
 	db.QueryRow("SELECT COUNT(*) FROM document_tags WHERE doc_id='wiki/c.md'").Scan(&count)
 	if count != 0 {
 		t.Errorf("expected 0 tags for nil claims, got %d", count)
+	}
+}
+
+func TestUpsertDocument_StoresDistillVersion(t *testing.T) {
+	dir := setupTestKB(t)
+	db, err := OpenDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	content := "---\ntitle: Versioned Note\ndistill_version: 0.4.7\n---\nBody"
+	os.WriteFile(filepath.Join(dir, "raw", "ver.md"), []byte(content), 0644)
+
+	_, err = IndexFiles(db, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var v sql.NullString
+	err = db.QueryRow("SELECT distill_version FROM documents WHERE id = ?", "raw/ver.md").Scan(&v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !v.Valid || v.String != "0.4.7" {
+		t.Errorf("expected 0.4.7, got %v", v)
 	}
 }
