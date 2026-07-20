@@ -429,7 +429,10 @@ func runServe(kbRoot string) error {
 	mux := http.NewServeMux()
 	mcp.RegisterRoutes(mux, kbRoot, cfg.Server.APIKey)
 
-	embeddedVer, _ := kbinit.ReadSchemaVersion()
+	embeddedVer, err := kbinit.ReadSchemaVersion()
+	if err != nil {
+		log.Printf("warning: read embedded schema version: %v", err)
+	}
 	webSrv := webui.NewServer(kbRoot, embeddedVer)
 	mux.Handle("/", webSrv.Handler())
 
