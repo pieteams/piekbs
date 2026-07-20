@@ -13,7 +13,9 @@ import (
 	"testing"
 
 	"github.com/pieteams/piekbs/internal/config"
+	"github.com/pieteams/piekbs/internal/kb"
 	"github.com/pieteams/piekbs/internal/larkimport"
+	"github.com/pieteams/piekbs/internal/version"
 )
 
 func newTestServer(t *testing.T) (*Server, string) {
@@ -160,5 +162,233 @@ func TestImportLarkAPI(t *testing.T) {
 	if !body.OK || len(body.TableRows) != 1 || body.TableRows[0] != 123 ||
 		body.UniqueRows != 120 || body.DuplicatesRemoved != 3 {
 		t.Fatalf("unexpected response: %s", rec.Body.String())
+	}
+}
+
+func TestDistillOutdated_DevVersion_ReturnsZero(t *testing.T) {
+	s, dir := newTestServer(t)
+	db, err := kb.GlobalDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(kb.CloseGlobalDB)
+
+	// Insert a wiki source-note (would be outdated for non-dev versions).
+	db.Exec(`INSERT INTO documents (id, path, layer, kind, title, description, content, content_hash, updated_at, authority, doc_timestamp)
+		VALUES ('wiki/note.md', 'wiki/note.md', 'wiki', 'source-note', 'Note', '', 'body', 'h1', 1, 3, 0)`)
+
+	orig := version.Version
+	version.Version = "dev"
+	defer func() { version.Version = orig }()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/distill/outdated", nil)
+	w := httptest.NewRecorder()
+	s.handleDistillOutdated(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp["count"].(float64) != 0 {
+		t.Errorf("expected count 0 for dev, got %v", resp["count"])
+	}
+}
+
+func TestDistillOutdated_ReturnsOutdatedCount(t *testing.T) {
+	s, dir := newTestServer(t)
+	db, err := kb.GlobalDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(kb.CloseGlobalDB)
+
+	db.Exec(`INSERT INTO documents (id, path, layer, kind, title, description, content, content_hash, updated_at, authority, doc_timestamp)
+		VALUES ('wiki/old.md', 'wiki/old.md', 'wiki', 'source-note', 'Old', '', 'body', 'h1', 1, 3, 0)`)
+
+	orig := version.Version
+	version.Version = "1.0.0"
+	defer func() { version.Version = orig }()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/distill/outdated", nil)
+	w := httptest.NewRecorder()
+	s.handleDistillOutdated(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp["count"].(float64) != 1 {
+		t.Errorf("expected count 1, got %v", resp["count"])
+	}
+	if resp["current_version"].(string) != "1.0.0" {
+		t.Errorf("expected current_version 1.0.0, got %v", resp["current_version"])
+	}
+}
+
+func TestDistillRefreshOutdated_MethodNotAllowed(t *testing.T) {
+	s, _ := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/distill/refresh-outdated", nil)
+	w := httptest.NewRecorder()
+	s.handleDistillRefreshOutdated(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected 405, got %d", w.Code)
+	}
+}
+
+func TestDistillRefreshOutdated_NoOutdated(t *testing.T) {
+	s, dir := newTestServer(t)
+	db, err := kb.GlobalDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(kb.CloseGlobalDB)
+	_ = db
+
+	orig := version.Version
+	version.Version = "dev"
+	defer func() { version.Version = orig }()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/distill/refresh-outdated", nil)
+	w := httptest.NewRecorder()
+	s.handleDistillRefreshOutdated(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp["enqueued"].(float64) != 0 || resp["cleaned"].(float64) != 0 {
+		t.Errorf("expected 0 enqueued/cleaned, got %v/%v", resp["enqueued"], resp["cleaned"])
+	}
+}
+
+func TestDistillRefreshOutdated_EnqueuesAndDeletesWiki(t *testing.T) {
+	s, dir := newTestServer(t)
+	db, err := kb.GlobalDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(kb.CloseGlobalDB)
+
+	// Create wiki file with source pointing to raw/.
+	wikiDir := filepath.Join(dir, "wiki")
+	if err := os.MkdirAll(wikiDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	wikiContent := "---\ntitle: Test\nsources:\n  - raw/foo/bar.md\n---\nbody"
+	if err := os.WriteFile(filepath.Join(wikiDir, "old.md"), []byte(wikiContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the raw source file so it's not treated as orphan.
+	rawDir := filepath.Join(dir, "raw", "foo")
+	if err := os.MkdirAll(rawDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(rawDir, "bar.md"), []byte("raw content"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Insert outdated DB record.
+	db.Exec(`INSERT INTO documents (id, path, layer, kind, title, description, content, content_hash, updated_at, authority, doc_timestamp)
+		VALUES ('wiki/old.md', 'wiki/old.md', 'wiki', 'source-note', 'Test', '', 'body', 'h1', 1, 3, 0)`)
+
+	orig := version.Version
+	version.Version = "1.0.0"
+	defer func() { version.Version = orig }()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/distill/refresh-outdated", nil)
+	w := httptest.NewRecorder()
+	s.handleDistillRefreshOutdated(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp["enqueued"].(float64) != 1 {
+		t.Errorf("expected 1 enqueued, got %v", resp["enqueued"])
+	}
+	if resp["cleaned"].(float64) != 0 {
+		t.Errorf("expected 0 cleaned, got %v", resp["cleaned"])
+	}
+
+	// Verify wiki file was deleted.
+	if _, err := os.Stat(filepath.Join(wikiDir, "old.md")); !os.IsNotExist(err) {
+		t.Error("wiki file should have been deleted")
+	}
+
+	// Verify raw file still exists.
+	if _, err := os.Stat(filepath.Join(rawDir, "bar.md")); err != nil {
+		t.Error("raw file should still exist")
+	}
+
+	// Verify distill_queue entry exists with correct path format (relative to raw/).
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM distill_queue WHERE path = 'foo/bar.md'").Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Errorf("expected 1 distill_queue entry for 'foo/bar.md', got %d", count)
+	}
+}
+
+func TestDistillRefreshOutdated_CleansOrphanNoSource(t *testing.T) {
+	s, dir := newTestServer(t)
+	db, err := kb.GlobalDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(kb.CloseGlobalDB)
+
+	// Create wiki file with no sources.
+	wikiDir := filepath.Join(dir, "wiki")
+	if err := os.MkdirAll(wikiDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	wikiContent := "---\ntitle: Orphan\n---\nbody"
+	if err := os.WriteFile(filepath.Join(wikiDir, "orphan.md"), []byte(wikiContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	db.Exec(`INSERT INTO documents (id, path, layer, kind, title, description, content, content_hash, updated_at, authority, doc_timestamp)
+		VALUES ('wiki/orphan.md', 'wiki/orphan.md', 'wiki', 'source-note', 'Orphan', '', 'body', 'h1', 1, 3, 0)`)
+
+	orig := version.Version
+	version.Version = "1.0.0"
+	defer func() { version.Version = orig }()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/distill/refresh-outdated", nil)
+	w := httptest.NewRecorder()
+	s.handleDistillRefreshOutdated(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp["cleaned"].(float64) != 1 {
+		t.Errorf("expected 1 cleaned, got %v", resp["cleaned"])
+	}
+	if resp["enqueued"].(float64) != 0 {
+		t.Errorf("expected 0 enqueued, got %v", resp["enqueued"])
+	}
+
+	// Verify orphan wiki file was deleted.
+	if _, err := os.Stat(filepath.Join(wikiDir, "orphan.md")); !os.IsNotExist(err) {
+		t.Error("orphan wiki file should have been deleted")
 	}
 }

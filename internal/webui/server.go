@@ -6,6 +6,7 @@ import (
 	"context"
 	"embed"
 	"net/http"
+	"sync"
 
 	"github.com/pieteams/piekbs/internal/larkimport"
 )
@@ -17,6 +18,7 @@ var staticFiles embed.FS
 type Server struct {
 	kbRoot     string
 	importLark func(context.Context, string, string, string) (*larkimport.Result, error)
+	refreshMu  sync.Mutex
 }
 
 // NewServer creates a Server for the given knowledge-base root directory.
@@ -74,6 +76,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/api/settings", s.handleSettings)
 	mux.HandleFunc("/api/schema/status", s.handleSchemaStatus)
 	mux.HandleFunc("/api/schema/upgrade", s.handleSchemaUpgrade)
+	mux.HandleFunc("/api/distill/outdated", s.handleDistillOutdated)
+	mux.HandleFunc("/api/distill/refresh-outdated", s.handleDistillRefreshOutdated)
 
 	return mux
 }

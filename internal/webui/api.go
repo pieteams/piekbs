@@ -251,6 +251,105 @@ func (s *Server) handleSchemaUpgrade(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleDistillOutdated returns the count of outdated source-notes. GET /api/distill/outdated
+func (s *Server) handleDistillOutdated(w http.ResponseWriter, r *http.Request) {
+	db, err := kb.GlobalDB(s.kbRoot)
+	if err != nil {
+		kbErrToHTTP(w, err)
+		return
+	}
+	paths, err := kb.FindOutdatedNotes(db, version.Version)
+	if err != nil {
+		kbErrToHTTP(w, err)
+		return
+	}
+	writeJSON(w, map[string]interface{}{
+		"count":           len(paths),
+		"current_version": version.Version,
+	})
+}
+
+// handleDistillRefreshOutdated enqueues outdated notes for re-distillation. POST /api/distill/refresh-outdated
+func (s *Server) handleDistillRefreshOutdated(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST required", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.refreshMu.TryLock() {
+		w.WriteHeader(http.StatusConflict)
+		writeJSON(w, map[string]interface{}{"error": "refresh already in progress"})
+		return
+	}
+	defer s.refreshMu.Unlock()
+
+	db, err := kb.GlobalDB(s.kbRoot)
+	if err != nil {
+		kbErrToHTTP(w, err)
+		return
+	}
+	outdated, err := kb.FindOutdatedNotes(db, version.Version)
+	if err != nil {
+		kbErrToHTTP(w, err)
+		return
+	}
+
+	var enqueued, cleaned int
+	var errs []string
+	now := time.Now().Unix()
+
+	for _, notePath := range outdated {
+		absPath := filepath.Join(s.kbRoot, filepath.FromSlash(notePath))
+		data, readErr := os.ReadFile(absPath)
+		if readErr != nil {
+			errs = append(errs, notePath+": read error: "+readErr.Error())
+			continue
+		}
+		parsed := kb.ParseMarkdown(string(data))
+
+		// Get raw source path from frontmatter sources field.
+		if len(parsed.Sources) == 0 || parsed.Sources[0] == "" {
+			// No sources — orphan wiki file. Clean up.
+			os.Remove(absPath)
+			db.Exec("DELETE FROM documents WHERE id = ?", notePath)
+			cleaned++
+			continue
+		}
+		rawSource := parsed.Sources[0] // e.g. "raw/foo/bar.md"
+		rawAbsPath := filepath.Join(s.kbRoot, filepath.FromSlash(rawSource))
+
+		if _, statErr := os.Stat(rawAbsPath); os.IsNotExist(statErr) {
+			// Raw file gone — orphan wiki file. Clean up.
+			os.Remove(absPath)
+			db.Exec("DELETE FROM documents WHERE id = ?", notePath)
+			cleaned++
+			continue
+		}
+
+		// Delete old wiki file, then enqueue raw for re-distill.
+		if removeErr := os.Remove(absPath); removeErr != nil {
+			errs = append(errs, notePath+": remove error: "+removeErr.Error())
+			continue
+		}
+		// Strip "raw/" prefix for distill_queue path format.
+		queuePath := strings.TrimPrefix(rawSource, "raw/")
+		_, insertErr := db.Exec(
+			`INSERT OR IGNORE INTO distill_queue (path, status, retry_count, queued_at, updated_at)
+             VALUES (?, 'pending', 0, ?, ?)`,
+			queuePath, now, now)
+		if insertErr != nil {
+			errs = append(errs, notePath+": enqueue error: "+insertErr.Error())
+			continue
+		}
+		enqueued++
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"enqueued": enqueued,
+		"cleaned":  cleaned,
+		"errors":   errs,
+	})
+}
+
 // writeJSON encodes v as JSON and writes it to w with Content-Type application/json.
 func writeJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
