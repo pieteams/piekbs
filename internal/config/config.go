@@ -72,6 +72,15 @@ func (c LLMConfig) IsAnthropic() bool {
 	return strings.EqualFold(c.APIType, "anthropic")
 }
 
+// SchemaVersionInt parses SchemaVersion as int. Returns 0 for non-numeric values.
+func (c Config) SchemaVersionInt() int {
+	v, err := strconv.Atoi(c.SchemaVersion)
+	if err != nil {
+		return 0
+	}
+	return v
+}
+
 type DistillConfig struct {
 	LLMConfig        // embed: BaseURL, Token, Model, APIType
 	Workers int      // concurrent distill workers (default 3)

@@ -278,3 +278,21 @@ func TestConfigSchemaVersionRoundTrip(t *testing.T) {
 		t.Errorf("SchemaVersion = %q, want %q", loaded.SchemaVersion, "0.4.7")
 	}
 }
+
+func TestSchemaVersionInt(t *testing.T) {
+	tests := []struct {
+		input string
+		want  int
+	}{
+		{"0.4.8", 0},
+		{"2", 2},
+		{"", 0},
+		{"abc", 0},
+	}
+	for _, tt := range tests {
+		c := Config{SchemaVersion: tt.input}
+		if got := c.SchemaVersionInt(); got != tt.want {
+			t.Errorf("SchemaVersionInt(%q) = %d, want %d", tt.input, got, tt.want)
+		}
+	}
+}

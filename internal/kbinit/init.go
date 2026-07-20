@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pieteams/piekbs/internal/config"
 	"github.com/pieteams/piekbs/internal/kb"
@@ -86,6 +87,17 @@ func UpgradeSchema(kbRoot string) ([]string, string, error) {
 	}
 
 	return updated, oldVersion, nil
+}
+
+// readSchemaVersion reads the schema VERSION from the embedded FS.
+func readSchemaVersion() (int, error) {
+	data, err := schemaFS.ReadFile("schema/VERSION")
+	if err != nil {
+		return 0, err
+	}
+	var v int
+	_, err = fmt.Sscanf(strings.TrimSpace(string(data)), "%d", &v)
+	return v, err
 }
 
 // writeSchemaFiles copies all embedded schema files into kbRoot/schema/.
