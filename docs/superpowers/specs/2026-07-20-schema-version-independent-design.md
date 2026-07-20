@@ -71,20 +71,20 @@ DistillFile 中改为读取 `cfg.SchemaVersionInt()`。
 
 ### 4. 数据库迁移
 
-**RENAME COLUMN**：
+**迁移逻辑**：
 
 ```sql
-ALTER TABLE documents RENAME COLUMN distill_version TO schema_version
+-- 1. 删除旧列（如果存在）
+ALTER TABLE documents DROP COLUMN distill_version;
+-- 2. 新增整数列
+ALTER TABLE documents ADD COLUMN schema_version INTEGER DEFAULT 0;
 ```
 
-列类型保持 TEXT（SQLite 不支持 ALTER COLUMN 改类型），存字符串形式的整数（如 `"2"`），默认值 `"0"`。
+注：SQLite 3.35.0+ 支持 DROP COLUMN（modernc.org/sqlite 满足）。
 
-**迁移逻辑**：
-1. 如果 `distill_version` 存在且 `schema_version` 不存在 → RENAME
-2. 如果两者都不存在 → `ADD COLUMN schema_version TEXT DEFAULT '0'`
-3. 回填：解析 frontmatter 中的 `schema_version`（int）或 `distill_version`（string，旧格式→`"0"`）
+**回填**：扫描 wiki source-notes frontmatter，如果有 `schema_version`（int）→ UPDATE；如果有 `distill_version`（string，旧格式）→ 视为 0。
 
-**upsertDocument**：提取 `schema_version` 整数，转为字符串写入。
+**upsertDocument**：提取 `schema_version` 整数写入。
 
 ### 5. 查询接口
 
@@ -100,12 +100,11 @@ func FindOutdatedNotes(db *sql.DB, currentSchemaVersion int) ([]string, error) {
     // ...
     for rows.Next() {
         var p string
-        var v string  // TEXT 列
+        var v int
         if err := rows.Scan(&p, &v); err != nil {
             return nil, err
         }
-        noteVer, _ := strconv.Atoi(v)  // 解析失败默认 0
-        if noteVer < currentSchemaVersion {
+        if v < currentSchemaVersion {
             paths = append(paths, p)
         }
     }
