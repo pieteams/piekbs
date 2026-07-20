@@ -129,6 +129,8 @@ piekbs synthesize --topic "RAG"
 
 **macOS:** Откройте DMG и перетащите PieKBS в Applications. Приложение работает как иконка в строке меню.
 
+> **Предупреждение Gatekeeper:** PieKBS не подписан сертификатом разработчика Apple. При первом запуске macOS может заблокировать приложение. Решение: правый клик на PieKBS.app → выбрать «Открыть» → нажать «Открыть» в диалоговом окне. Или выполнить в Терминале: `xattr -cr /Applications/PieKBS.app`
+
 **Linux:**
 ```bash
 tar -xzf piekbs-<version>-linux-amd64.tar.gz -C /path/to/install/

@@ -129,6 +129,8 @@ Télécharger la dernière version :
 
 **macOS :** Ouvrez le DMG et faites glisser PieKBS dans Applications. L'app fonctionne comme une icône dans la barre de menus.
 
+> **Avertissement Gatekeeper :** PieKBS n'est pas signé avec un certificat de développeur Apple. Au premier lancement, macOS peut bloquer l'application. Solution : clic droit sur PieKBS.app → sélectionner « Ouvrir » → cliquer sur « Ouvrir » dans la boîte de dialogue. Ou exécuter dans le Terminal : `xattr -cr /Applications/PieKBS.app`
+
 **Linux :**
 ```bash
 tar -xzf piekbs-<version>-linux-amd64.tar.gz -C /path/to/install/
