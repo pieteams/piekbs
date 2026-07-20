@@ -6,15 +6,15 @@ import (
 	"database/sql"
 )
 
-// FindOutdatedNotes returns wiki source-notes whose distill_version is NULL
-// or differs from currentVersion. Returns nil when currentVersion is "dev"
-// (development mode skips staleness detection).
-func FindOutdatedNotes(db *sql.DB, currentVersion string) ([]string, error) {
-	if currentVersion == "dev" {
+// FindOutdatedNotes returns wiki source-notes whose schema_version is less
+// than currentSchemaVersion. Returns nil when currentSchemaVersion is 0
+// (development mode or unset).
+func FindOutdatedNotes(db *sql.DB, currentSchemaVersion int) ([]string, error) {
+	if currentSchemaVersion == 0 {
 		return nil, nil
 	}
 	rows, err := db.Query(
-		"SELECT path, distill_version FROM documents WHERE layer='wiki' AND kind='source-note'")
+		"SELECT path, schema_version FROM documents WHERE layer='wiki' AND kind='source-note'")
 	if err != nil {
 		return nil, err
 	}
@@ -23,11 +23,11 @@ func FindOutdatedNotes(db *sql.DB, currentVersion string) ([]string, error) {
 	var paths []string
 	for rows.Next() {
 		var p string
-		var v sql.NullString
+		var v int
 		if err := rows.Scan(&p, &v); err != nil {
 			return nil, err
 		}
-		if !v.Valid || v.String != currentVersion {
+		if v < currentSchemaVersion {
 			paths = append(paths, p)
 		}
 	}

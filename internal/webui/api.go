@@ -254,12 +254,17 @@ func (s *Server) handleSchemaUpgrade(w http.ResponseWriter, r *http.Request) {
 
 // handleDistillOutdated returns the count of outdated source-notes. GET /api/distill/outdated
 func (s *Server) handleDistillOutdated(w http.ResponseWriter, r *http.Request) {
+	cfg, err := config.Load(s.kbRoot)
+	if err != nil {
+		kbErrToHTTP(w, err)
+		return
+	}
 	db, err := kb.GlobalDB(s.kbRoot)
 	if err != nil {
 		kbErrToHTTP(w, err)
 		return
 	}
-	paths, err := kb.FindOutdatedNotes(db, version.Version)
+	paths, err := kb.FindOutdatedNotes(db, cfg.SchemaVersionInt())
 	if err != nil {
 		kbErrToHTTP(w, err)
 		return
@@ -283,12 +288,17 @@ func (s *Server) handleDistillRefreshOutdated(w http.ResponseWriter, r *http.Req
 	}
 	defer s.refreshMu.Unlock()
 
+	cfg, err := config.Load(s.kbRoot)
+	if err != nil {
+		kbErrToHTTP(w, err)
+		return
+	}
 	db, err := kb.GlobalDB(s.kbRoot)
 	if err != nil {
 		kbErrToHTTP(w, err)
 		return
 	}
-	outdated, err := kb.FindOutdatedNotes(db, version.Version)
+	outdated, err := kb.FindOutdatedNotes(db, cfg.SchemaVersionInt())
 	if err != nil {
 		kbErrToHTTP(w, err)
 		return

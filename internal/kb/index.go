@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -134,10 +135,12 @@ func upsertDocument(db *sql.DB, kbRoot, path, did string, force bool) (bool, err
 
 	parsed := ParseMarkdown(text)
 
-	var distillVersion sql.NullString
-	if v, ok := parsed.RawFM["distill_version"]; ok {
-		if s, ok := v.(string); ok && s != "" {
-			distillVersion = sql.NullString{String: s, Valid: true}
+	var schemaVersion int
+	if v, ok := parsed.RawFM["schema_version"]; ok {
+		if s, ok := v.(string); ok {
+			if n, err := strconv.Atoi(s); err == nil {
+				schemaVersion = n
+			}
 		}
 	}
 
@@ -160,16 +163,16 @@ func upsertDocument(db *sql.DB, kbRoot, path, did string, force bool) (bool, err
 	}
 
 	_, err = db.Exec(`
-		INSERT INTO documents (id, path, layer, kind, title, description, content, content_hash, source_uri, updated_at, authority, doc_timestamp, distill_version)
+		INSERT INTO documents (id, path, layer, kind, title, description, content, content_hash, source_uri, updated_at, authority, doc_timestamp, schema_version)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
 			path=excluded.path, layer=excluded.layer, kind=excluded.kind,
 			title=excluded.title, description=excluded.description, content=excluded.content,
 			content_hash=excluded.content_hash, source_uri=excluded.source_uri,
 			updated_at=excluded.updated_at, authority=excluded.authority,
-			doc_timestamp=excluded.doc_timestamp, distill_version=excluded.distill_version
+			doc_timestamp=excluded.doc_timestamp, schema_version=excluded.schema_version
 	`, did, filepath.ToSlash(rel), layer, parsed.Kind, title, parsed.Description,
-		text, h, nil, now, parsed.Authority, docTs, distillVersion)
+		text, h, nil, now, parsed.Authority, docTs, schemaVersion)
 	if err != nil {
 		return false, err
 	}

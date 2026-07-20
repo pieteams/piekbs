@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/pieteams/piekbs/internal/version"
 )
 
 func TestKBError(t *testing.T) {
@@ -28,7 +26,7 @@ func TestKBError(t *testing.T) {
 	}
 }
 
-func TestKBLint_OutdatedDistill(t *testing.T) {
+func TestKBLint_OutdatedSchemaVersion(t *testing.T) {
 	dir := setupTestKB(t)
 	t.Cleanup(CloseGlobalDB)
 	db, err := OpenDB(dir)
@@ -36,14 +34,12 @@ func TestKBLint_OutdatedDistill(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Set version to trigger outdated detection (dev skips it).
-	origVer := version.Version
-	version.Version = "1.0.0"
-	t.Cleanup(func() { version.Version = origVer })
+	// Write a config with schema_version "2" so outdated detection triggers.
+	os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("schema_version: \"2\"\n"), 0o644)
 
-	// Insert a source-note with old distill_version.
-	db.Exec(`INSERT INTO documents (id, path, layer, kind, title, description, content, content_hash, updated_at, authority, doc_timestamp, distill_version)
-		VALUES ('wiki/old.md', 'wiki/old.md', 'wiki', 'source-note', 'Old', '', 'body', 'h1', 1, 3, 0, '0.1.0')`)
+	// Insert a source-note with old schema_version (1 < 2).
+	db.Exec(`INSERT INTO documents (id, path, layer, kind, title, description, content, content_hash, updated_at, authority, doc_timestamp, schema_version)
+		VALUES ('wiki/old.md', 'wiki/old.md', 'wiki', 'source-note', 'Old', '', 'body', 'h1', 1, 3, 0, 1)`)
 	db.Close()
 
 	result, err := KBLint(dir)

@@ -3,7 +3,6 @@
 package kb
 
 import (
-	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
@@ -250,7 +249,7 @@ func TestUpsertDocumentTagsNilClaims(t *testing.T) {
 	}
 }
 
-func TestUpsertDocument_StoresDistillVersion(t *testing.T) {
+func TestUpsertDocument_StoresSchemaVersion(t *testing.T) {
 	dir := setupTestKB(t)
 	db, err := OpenDB(dir)
 	if err != nil {
@@ -258,7 +257,7 @@ func TestUpsertDocument_StoresDistillVersion(t *testing.T) {
 	}
 	defer db.Close()
 
-	content := "---\ntitle: Versioned Note\ndistill_version: 0.4.7\n---\nBody"
+	content := "---\ntitle: Versioned Note\nschema_version: 2\n---\nBody"
 	os.WriteFile(filepath.Join(dir, "raw", "ver.md"), []byte(content), 0644)
 
 	_, err = IndexFiles(db, dir)
@@ -266,12 +265,12 @@ func TestUpsertDocument_StoresDistillVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var v sql.NullString
-	err = db.QueryRow("SELECT distill_version FROM documents WHERE id = ?", "raw/ver.md").Scan(&v)
+	var v int
+	err = db.QueryRow("SELECT schema_version FROM documents WHERE id = ?", "raw/ver.md").Scan(&v)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !v.Valid || v.String != "0.4.7" {
-		t.Errorf("expected 0.4.7, got %v", v)
+	if v != 2 {
+		t.Errorf("expected 2, got %v", v)
 	}
 }

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pieteams/piekbs/internal/version"
+	"github.com/pieteams/piekbs/internal/config"
 )
 
 // KBError is a typed error returned by all KB service functions.
@@ -310,8 +310,12 @@ func KBLint(kbRoot string) (*LintResult, error) {
 		redLinks = []RedLink{}
 	}
 
-	// Outdated distill version check.
-	outdated, outdatedErr := FindOutdatedNotes(db, version.Version)
+	// Outdated schema version check.
+	schemaVer := 0
+	if cfg, cfgErr := config.Load(kbRoot); cfgErr == nil {
+		schemaVer = cfg.SchemaVersionInt()
+	}
+	outdated, outdatedErr := FindOutdatedNotes(db, schemaVer)
 	if outdatedErr == nil {
 		for _, p := range outdated {
 			warnings = append(warnings, LintWarning{

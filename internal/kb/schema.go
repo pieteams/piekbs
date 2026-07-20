@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS documents (
     updated_at INTEGER NOT NULL,
     authority INTEGER NOT NULL DEFAULT 3,
     doc_timestamp INTEGER NOT NULL DEFAULT 0,
-    distill_version TEXT
+    schema_version INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS links (

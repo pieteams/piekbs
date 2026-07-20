@@ -152,7 +152,7 @@ func TestDocumentTagsTableExists(t *testing.T) {
 	}
 }
 
-func TestOpenDB_MigratesDistillVersionColumn(t *testing.T) {
+func TestOpenDB_MigratesSchemaVersionColumn(t *testing.T) {
 	dir := t.TempDir()
 	db, err := OpenDB(dir)
 	if err != nil {
@@ -170,12 +170,12 @@ func TestOpenDB_MigratesDistillVersionColumn(t *testing.T) {
 		var dflt interface{}
 		var pk int
 		rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk)
-		if name == "distill_version" {
+		if name == "schema_version" {
 			found = true
 		}
 	}
 	if !found {
-		t.Error("distill_version column not found after migration")
+		t.Error("schema_version column not found after migration")
 	}
 }
 

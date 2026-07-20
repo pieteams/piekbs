@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 
 	_ "modernc.org/sqlite"
@@ -101,7 +102,7 @@ func migrateDescription(db *sql.DB, kbRoot string) error {
 	hasDescription := false
 	hasAuthority := false
 	hasDocTimestamp := false
-	hasDistillVersion := false
+	hasSchemaVersion := false
 	for rows.Next() {
 		var cid int
 		var name, ctype string
@@ -120,8 +121,8 @@ func migrateDescription(db *sql.DB, kbRoot string) error {
 		if name == "doc_timestamp" {
 			hasDocTimestamp = true
 		}
-		if name == "distill_version" {
-			hasDistillVersion = true
+		if name == "schema_version" {
+			hasSchemaVersion = true
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -143,9 +144,12 @@ func migrateDescription(db *sql.DB, kbRoot string) error {
 		}
 	}
 
-	// Migrate distill_version column.
-	if !hasDistillVersion {
-		if _, err := db.Exec("ALTER TABLE documents ADD COLUMN distill_version TEXT"); err != nil {
+	// Migrate to integer schema_version column.
+	if !hasSchemaVersion {
+		// Drop old distill_version column if it exists.
+		db.Exec("ALTER TABLE documents DROP COLUMN distill_version")
+		// Add new integer column.
+		if _, err := db.Exec("ALTER TABLE documents ADD COLUMN schema_version INTEGER DEFAULT 0"); err != nil {
 			return err
 		}
 		// Backfill from existing wiki source-notes frontmatter.
@@ -160,11 +164,13 @@ func migrateDescription(db *sql.DB, kbRoot string) error {
 					return nil
 				}
 				parsed := ParseMarkdown(string(data))
-				if v, ok := parsed.RawFM["distill_version"]; ok {
-					if s, ok := v.(string); ok && s != "" {
-						rel, _ := filepath.Rel(kbRoot, path)
-						db.Exec("UPDATE documents SET distill_version = ? WHERE path = ?",
-							s, filepath.ToSlash(rel))
+				if v, ok := parsed.RawFM["schema_version"]; ok {
+					if s, ok := v.(string); ok {
+						if n, err := strconv.Atoi(s); err == nil && n > 0 {
+							rel, _ := filepath.Rel(kbRoot, path)
+							db.Exec("UPDATE documents SET schema_version = ? WHERE path = ?",
+								n, filepath.ToSlash(rel))
+						}
 					}
 				}
 				return nil
