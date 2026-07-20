@@ -129,6 +129,8 @@ Agent 透過 MCP 使用 `kb_search` + `kb_page`。搜尋基於純 FTS（SQLite F
 
 **macOS：** 開啟 DMG，將 PieKBS 拖入 Applications。App 以 menubar 圖示形式運行。
 
+> **Gatekeeper 警告：** PieKBS 未使用 Apple 開發者憑證簽章。首次啟動時，macOS 可能會阻止應用程式執行。解決方法：右鍵點擊 PieKBS.app → 選擇「打開」→ 在彈出對話框中點擊「打開」。或在終端機中執行 `xattr -cr /Applications/PieKBS.app`。
+
 **Linux：**
 ```bash
 tar -xzf piekbs-<version>-linux-amd64.tar.gz -C /path/to/install/

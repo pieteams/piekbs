@@ -129,6 +129,8 @@ piekbs synthesize --topic "RAG"
 
 **macOS:** DMG를 열고 PieKBS를 Applications로 드래그합니다. 앱은 메뉴바 아이콘으로 실행됩니다.
 
+> **Gatekeeper 경고:** PieKBS는 Apple 개발자 인증서로 서명되지 않았습니다. 첫 실행 시 macOS가 앱을 차단할 수 있습니다. 해결 방법: PieKBS.app을 마우스 오른쪽 버튼으로 클릭 → "열기" 선택 → 대화 상자에서 "열기" 클릭. 또는 터미널에서 실행: `xattr -cr /Applications/PieKBS.app`
+
 **Linux:**
 ```bash
 tar -xzf piekbs-<version>-linux-amd64.tar.gz -C /path/to/install/
