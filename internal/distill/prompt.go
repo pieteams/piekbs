@@ -88,7 +88,7 @@ Known caveats, gaps, biases, or expiration concerns about this source.
 ## Related Pages
 Links to related wiki pages (use [[Page Title]] syntax). If unknown, write "None."
 
-Begin your response directly with the YAML frontmatter (---).`
+Begin your response directly with the YAML frontmatter. The first line MUST be exactly "---" followed by a newline, then the frontmatter fields. Do NOT merge "---" with the first field on the same line.`
 
 // buildSystemPrompt returns the system prompt for source-note distillation.
 // If schema/templates/source-note.md exists in kbRoot, its content is used
@@ -138,7 +138,7 @@ Use the following template as the exact structure for your output:
 
 ` + string(data) + `
 
-Begin your response directly with the YAML frontmatter (---).`
+Begin your response directly with the YAML frontmatter. The first line MUST be exactly "---" followed by a newline, then the frontmatter fields. Do NOT merge "---" with the first field on the same line.`
 
 	// Append reference files as quality constraints if they exist.
 	for _, ref := range []string{"page-types.md", "citation-rules.md"} {

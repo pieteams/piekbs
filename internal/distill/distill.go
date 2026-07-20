@@ -38,6 +38,19 @@ func stripConvertedPrefix(rel string) string {
 
 // StripCodeFences removes a leading ```[language] ... ``` wrapper if present,
 // or a dangling closing fence the LLM appended without ever opening one.
+// FixFrontmatterDelimiter ensures the YAML frontmatter starts with "---\n".
+// Some LLMs output "---type:" without a newline after the delimiter.
+func FixFrontmatterDelimiter(text string) string {
+	if strings.HasPrefix(text, "---\n") {
+		return text
+	}
+	// Fix "---type:" → "---\ntype:"
+	if strings.HasPrefix(text, "---") && len(text) > 3 && text[3] != '\n' {
+		return "---\n" + text[3:]
+	}
+	return text
+}
+
 func StripCodeFences(text string) string {
 	text = strings.TrimSpace(text)
 
@@ -605,6 +618,7 @@ func DistillFile(config Config, rawPath, kbRoot string, embedder kb.Embedder) er
 			return fmt.Errorf("call LLM: %w", err)
 		}
 		generated = StripCodeFences(generated)
+		generated = FixFrontmatterDelimiter(generated)
 	}
 
 	info, statErr := os.Stat(rawPath)
