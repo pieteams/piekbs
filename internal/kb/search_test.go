@@ -262,6 +262,35 @@ func TestSearchResultMatchPhaseFields(t *testing.T) {
 	}
 }
 
+func TestSearchLayered_WikiPriority(t *testing.T) {
+	dir := t.TempDir()
+	db, err := OpenDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	// Insert a raw file and a wiki note with same content.
+	db.Exec(`INSERT INTO documents (id, path, layer, kind, title, description, content, content_hash, updated_at, authority, doc_timestamp, schema_version)
+		VALUES ('raw/test.md', 'raw/test.md', 'raw', '', 'Test RAG', '', 'RAG content', 'h1', 1, 3, 0, 0)`)
+	db.Exec(`INSERT INTO documents (id, path, layer, kind, title, description, content, content_hash, updated_at, authority, doc_timestamp, schema_version)
+		VALUES ('wiki/test.md', 'wiki/test.md', 'wiki', 'source-note', 'Test RAG', '', 'RAG content', 'h2', 1, 3, 0, 1)`)
+	// rebuild FTS
+	db.Exec(`INSERT INTO document_fts(document_fts) VALUES('rebuild')`)
+
+	results, _, err := SearchLayered(db, dir, "RAG", nil, nil, 5, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) < 2 {
+		t.Fatalf("expected >=2 results, got %d", len(results))
+	}
+	// Wiki should rank above raw.
+	if results[0].Layer != "wiki" {
+		t.Errorf("expected first result to be wiki, got %s", results[0].Layer)
+	}
+}
+
 func TestMergeRelated(t *testing.T) {
 	a := []RelatedDoc{
 		{ID: "wiki/a.md", Title: "A", Kind: "source-note"},

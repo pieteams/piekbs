@@ -255,12 +255,11 @@ func scanResults(db *sql.DB, sqlStr string, args ...interface{}) ([]SearchResult
 	return results, rows.Err()
 }
 
-// sortResults sorts results by: WikiPriority → MatchPhase → Coverage → FTSRank.
-// keywords is used to compute Coverage for OR/LIKE results (AND results already have Coverage set).
-func sortResults(results []SearchResult, keywords []string) {
-	// Compute Coverage for OR/LIKE results by counting keyword hits in Title+Snippet.
+// sortWithPriority sorts results by WikiPriority → MatchPhase → Coverage → finalKey.
+// Coverage is computed by counting keyword hits in Title+Snippet.
+func sortWithPriority(results []SearchResult, keywords []string, finalKey func(a, b SearchResult) bool) {
 	for i := range results {
-		if results[i].MatchPhase > 0 && len(keywords) > 0 {
+		if len(keywords) > 0 {
 			text := strings.ToLower(results[i].Title + " " + results[i].Snippet)
 			count := 0
 			for _, kw := range keywords {
@@ -282,6 +281,14 @@ func sortResults(results []SearchResult, keywords []string) {
 		if a.Coverage != b.Coverage {
 			return a.Coverage > b.Coverage
 		}
+		return finalKey(a, b)
+	})
+}
+
+// sortResults sorts results by: WikiPriority → MatchPhase → Coverage → FTSRank.
+// keywords is used to compute Coverage for OR/LIKE results (AND results already have Coverage set).
+func sortResults(results []SearchResult, keywords []string) {
+	sortWithPriority(results, keywords, func(a, b SearchResult) bool {
 		return a.FTSRank < b.FTSRank
 	})
 }
@@ -459,9 +466,10 @@ func SearchLayered(db *sql.DB, kbRoot, query string, layer, kind *string, source
 		results[i].HybridScore = score
 	}
 
-	// Sort by HybridScore descending.
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].HybridScore > results[j].HybridScore
+	// Sort by WikiPriority → MatchPhase → Coverage → HybridScore.
+	keywords := strings.Fields(query)
+	sortWithPriority(results, keywords, func(a, b SearchResult) bool {
+		return a.HybridScore > b.HybridScore
 	})
 
 	// Split into source-notes and synthesized, cap each pool.
