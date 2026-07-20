@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/pieteams/piekbs/internal/version"
 )
 
 func TestKBError(t *testing.T) {
@@ -23,6 +25,40 @@ func TestKBError(t *testing.T) {
 	var kbe *KBError
 	if !errors.As(err, &kbe) {
 		t.Error("errors.As should match *KBError")
+	}
+}
+
+func TestKBLint_OutdatedDistill(t *testing.T) {
+	dir := setupTestKB(t)
+	t.Cleanup(CloseGlobalDB)
+	db, err := OpenDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Set version to trigger outdated detection (dev skips it).
+	origVer := version.Version
+	version.Version = "1.0.0"
+	t.Cleanup(func() { version.Version = origVer })
+
+	// Insert a source-note with old distill_version.
+	db.Exec(`INSERT INTO documents (id, path, layer, kind, title, description, content, content_hash, updated_at, authority, doc_timestamp, distill_version)
+		VALUES ('wiki/old.md', 'wiki/old.md', 'wiki', 'source-note', 'Old', '', 'body', 'h1', 1, 3, 0, '0.1.0')`)
+	db.Close()
+
+	result, err := KBLint(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var found bool
+	for _, w := range result.Warnings {
+		if w.Kind == "outdated_distill" && w.Path == "wiki/old.md" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected outdated_distill warning for wiki/old.md, got %v", result.Warnings)
 	}
 }
 

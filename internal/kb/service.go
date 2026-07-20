@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/pieteams/piekbs/internal/version"
 )
 
 // KBError is a typed error returned by all KB service functions.
@@ -306,6 +308,18 @@ func KBLint(kbRoot string) (*LintResult, error) {
 	warnings = append(warnings, blWarnings...)
 	if redLinks == nil {
 		redLinks = []RedLink{}
+	}
+
+	// Outdated distill version check.
+	outdated, outdatedErr := FindOutdatedNotes(db, version.Version)
+	if outdatedErr == nil {
+		for _, p := range outdated {
+			warnings = append(warnings, LintWarning{
+				Path:   p,
+				Kind:   "outdated_distill",
+				Detail: "distill version missing or outdated",
+			})
+		}
 	}
 
 	// Write red_links.json (overwrite each run).
