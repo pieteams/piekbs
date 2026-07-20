@@ -152,6 +152,33 @@ func TestDocumentTagsTableExists(t *testing.T) {
 	}
 }
 
+func TestOpenDB_MigratesDistillVersionColumn(t *testing.T) {
+	dir := t.TempDir()
+	db, err := OpenDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	var found bool
+	rows, _ := db.Query("PRAGMA table_info(documents)")
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull int
+		var dflt interface{}
+		var pk int
+		rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk)
+		if name == "distill_version" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("distill_version column not found after migration")
+	}
+}
+
 func TestContentHash(t *testing.T) {
 	h1 := ContentHash("hello world")
 	h2 := ContentHash("hello world")
