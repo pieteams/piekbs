@@ -174,7 +174,7 @@ func TestHybridRankSynthesizedBoostIsMultiplicative(t *testing.T) {
 		{ID: "a", Kind: "source-note", FTSRank: -1.0},
 		{ID: "b", Kind: "concept", FTSRank: -1.0},
 	}
-	result := HybridRank(fts, nil, nil, nil)
+	result := HybridRank(fts, nil, nil, nil, []string{"test"})
 	var aScore, bScore float64
 	for _, r := range result {
 		if r.ID == "a" {

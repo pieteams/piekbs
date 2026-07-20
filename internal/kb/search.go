@@ -515,7 +515,7 @@ func SearchLayered(db *sql.DB, kbRoot, query string, layer, kind *string, source
 // synthesizedBoost (multiplicative 1.3x for concept/comparison/decision)
 // and authority adjustments. Returns results sorted by HybridScore descending.
 // graph may be nil; embedder may be nil (FTS-only mode).
-func HybridRank(fts []SearchResult, graph map[string]float64, conflicts []Conflict, embedder Embedder) []SearchResult {
+func HybridRank(fts []SearchResult, graph map[string]float64, conflicts []Conflict, embedder Embedder, keywords []string) []SearchResult {
 	results := make([]SearchResult, len(fts))
 	copy(results, fts)
 
@@ -535,9 +535,9 @@ func HybridRank(fts []SearchResult, graph map[string]float64, conflicts []Confli
 		results[i].HybridScore = rrfScore
 	}
 
-	// Sort by HybridScore descending.
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].HybridScore > results[j].HybridScore
+	// Sort by WikiPriority → MatchPhase → Coverage → HybridScore.
+	sortWithPriority(results, keywords, func(a, b SearchResult) bool {
+		return a.HybridScore > b.HybridScore
 	})
 	return results
 }
