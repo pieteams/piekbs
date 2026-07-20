@@ -43,7 +43,7 @@ type SearchResult struct {
 	VecScore     float64      `json:"vec_score,omitempty"`
 	HybridScore  float64      `json:"hybrid_score,omitempty"`
 	MatchPhase   int          `json:"match_phase,omitempty"` // 0=AND, 1=OR, 2=LIKE
-	Coverage     int          `json:"coverage,omitempty"`    // 命中查询词条数（AND 结果=总词数，OR/LIKE 由 sortResults 补全）
+	Coverage     int          `json:"coverage,omitempty"`    // Title+Snippet 中命中的查询词条数（由 sortWithPriority 统一计算）
 	GraphBoost   float64      `json:"graph_boost,omitempty"`
 	Related      []RelatedDoc `json:"related,omitempty"`
 	Conflicts    []string     `json:"conflicts,omitempty"`

@@ -251,6 +251,22 @@ func TestSortResults_FTSRankFinalTiebreaker(t *testing.T) {
 	}
 }
 
+// TestSortResults_ANDCoverageFromTitleSnippet verifies that AND-result Coverage is
+// recomputed from Title+Snippet by sortWithPriority, not simply set to total keyword count.
+func TestSortResults_ANDCoverageFromTitleSnippet(t *testing.T) {
+	// Simulate an AND result for keywords ["Go", "Python"] where the document
+	// was returned by FTS AND (both keywords in full content), but Title+Snippet
+	// only contains "Go" — not "Python".
+	results := []SearchResult{
+		{ID: "and-doc", Title: "Go article", Snippet: "fast compiled language", WikiPriority: 1.0, FTSRank: -1.0, MatchPhase: 0, Coverage: 2},
+	}
+	sortResults(results, []string{"Go", "Python"})
+	// Coverage must reflect Title+Snippet (only "Go" present), not total keywords (2).
+	if results[0].Coverage != 1 {
+		t.Errorf("AND-result Coverage should be 1 (from Title+Snippet), got %d", results[0].Coverage)
+	}
+}
+
 // TestSearchResultMatchPhaseFields verifies the new struct fields exist and are zero-valued by default.
 func TestSearchResultMatchPhaseFields(t *testing.T) {
 	r := SearchResult{ID: "test", Title: "Test"}
