@@ -271,7 +271,7 @@ func (s *Server) handleDistillOutdated(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, map[string]interface{}{
 		"count":           len(paths),
-		"current_version": version.Version,
+		"current_version": cfg.SchemaVersionInt(),
 	})
 }
 
