@@ -223,10 +223,13 @@ func GroundProvenance(text, rawContent string, imported time.Time) string {
 // excluded from recency ranking rather than feeding it a guess).
 func groundTimestamp(value string, rawMeta map[string]string, rawContent string, imported time.Time) string {
 	if explicit := rawMeta["timestamp"]; explicit != "" {
-		return explicit
+		return normalizeTimestamp(explicit)
 	}
 	if explicit := rawMeta["published"]; explicit != "" {
-		return explicit
+		return normalizeTimestamp(explicit)
+	}
+	if explicit := rawMeta["date"]; explicit != "" {
+		return normalizeTimestamp(explicit)
 	}
 	if value == "" {
 		return ""
@@ -245,6 +248,22 @@ func groundTimestamp(value string, rawMeta map[string]string, rawContent string,
 	return ""
 }
 
+// normalizeTimestamp converts a date string to ISO 8601 datetime format.
+// "2026-05-25" → "2026-05-25T00:00:00Z"
+// "2026-05-25T08:06:00Z" → unchanged
+func normalizeTimestamp(ts string) string {
+	// Already RFC3339 datetime.
+	if t, err := time.Parse(time.RFC3339, ts); err == nil {
+		return t.Format(time.RFC3339)
+	}
+	// Pure date YYYY-MM-DD.
+	if t, err := time.Parse("2006-01-02", ts); err == nil {
+		return t.Format(time.RFC3339)
+	}
+	// Other formats: return as-is.
+	return ts
+}
+
 func parseRawFrontmatter(raw string) map[string]string {
 	values := map[string]string{}
 	if !strings.HasPrefix(raw, "---\n") {
@@ -261,7 +280,7 @@ func parseRawFrontmatter(raw string) map[string]string {
 		}
 		key = strings.TrimSpace(strings.ToLower(key))
 		switch key {
-		case "source_url", "author", "published", "timestamp":
+		case "source_url", "author", "published", "timestamp", "date":
 			values[key] = yamlScalar(strings.TrimSpace(value))
 		}
 	}
