@@ -429,7 +429,8 @@ func runServe(kbRoot string) error {
 	mux := http.NewServeMux()
 	mcp.RegisterRoutes(mux, kbRoot, cfg.Server.APIKey)
 
-	webSrv := webui.NewServer(kbRoot)
+	embeddedVer, _ := kbinit.ReadSchemaVersion()
+	webSrv := webui.NewServer(kbRoot, embeddedVer)
 	mux.Handle("/", webSrv.Handler())
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)

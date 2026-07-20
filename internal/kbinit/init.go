@@ -33,7 +33,7 @@ func Init(kbRoot string, force bool) error {
 		return err
 	}
 
-	schemaVer, err := readSchemaVersion()
+	schemaVer, err := ReadSchemaVersion()
 	if err != nil {
 		return fmt.Errorf("read schema version: %w", err)
 	}
@@ -67,7 +67,7 @@ func UpgradeSchema(kbRoot string) ([]string, int, error) {
 		return nil, oldVersion, err
 	}
 
-	newVersion, err := readSchemaVersion()
+	newVersion, err := ReadSchemaVersion()
 	if err != nil {
 		return nil, oldVersion, fmt.Errorf("read schema version: %w", err)
 	}
@@ -98,8 +98,8 @@ func UpgradeSchema(kbRoot string) ([]string, int, error) {
 	return updated, oldVersion, nil
 }
 
-// readSchemaVersion reads the schema VERSION from the embedded FS.
-func readSchemaVersion() (int, error) {
+// ReadSchemaVersion reads the schema VERSION from the embedded FS.
+func ReadSchemaVersion() (int, error) {
 	data, err := schemaFS.ReadFile("schema/VERSION")
 	if err != nil {
 		return 0, err

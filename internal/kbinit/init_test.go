@@ -16,9 +16,9 @@ import (
 var schemaVersionInt int
 
 func init() {
-	v, err := readSchemaVersion()
+	v, err := ReadSchemaVersion()
 	if err != nil {
-		panic(fmt.Sprintf("readSchemaVersion: %v", err))
+		panic(fmt.Sprintf("ReadSchemaVersion: %v", err))
 	}
 	schemaVersionInt = v
 }

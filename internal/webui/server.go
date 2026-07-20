@@ -16,18 +16,20 @@ var staticFiles embed.FS
 
 // Server serves the Web UI and REST API.
 type Server struct {
-	kbRoot     string
-	importLark func(context.Context, string, string, string) (*larkimport.Result, error)
-	refreshMu  sync.Mutex
+	kbRoot                string
+	importLark            func(context.Context, string, string, string) (*larkimport.Result, error)
+	refreshMu             sync.Mutex
+	embeddedSchemaVersion int
 }
 
 // NewServer creates a Server for the given knowledge-base root directory.
-func NewServer(kbRoot string) *Server {
+func NewServer(kbRoot string, embeddedSchemaVersion int) *Server {
 	return &Server{
 		kbRoot: kbRoot,
 		importLark: func(ctx context.Context, kbRoot, url, name string) (*larkimport.Result, error) {
 			return larkimport.Import(ctx, kbRoot, url, name, nil)
 		},
+		embeddedSchemaVersion: embeddedSchemaVersion,
 	}
 }
 

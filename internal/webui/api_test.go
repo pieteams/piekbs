@@ -23,7 +23,7 @@ func newTestServer(t *testing.T) (*Server, string) {
 	if err := os.MkdirAll(filepath.Join(dir, "index"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	return NewServer(dir), dir
+	return NewServer(dir, 0), dir
 }
 
 func TestSettingsGetIncludesLanguage(t *testing.T) {
@@ -90,7 +90,7 @@ func TestSettingsDoesNotExposeOrClearSavedToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	server := NewServer(kbRoot)
+	server := NewServer(kbRoot, 0)
 	getReq := httptest.NewRequest(http.MethodGet, "/api/settings", nil)
 	getRec := httptest.NewRecorder()
 	server.handleSettings(getRec, getReq)
@@ -128,7 +128,7 @@ func TestSettingsDoesNotExposeOrClearSavedToken(t *testing.T) {
 }
 
 func TestImportLarkAPI(t *testing.T) {
-	server := NewServer(t.TempDir())
+	server := NewServer(t.TempDir(), 0)
 	server.importLark = func(_ context.Context, _, url, name string) (*larkimport.Result, error) {
 		if url != "https://example.larkoffice.com/wiki/abc" || name != "" {
 			t.Fatalf("unexpected import request: url=%q name=%q", url, name)
@@ -402,5 +402,79 @@ func TestDistillRefreshOutdated_ConflictWhenMutexHeld(t *testing.T) {
 	}
 	if resp["error"] != "refresh already in progress" {
 		t.Errorf("expected conflict error message, got %v", resp["error"])
+	}
+}
+
+func TestSchemaStatus_NoConfig_ReturnsZeroVersion(t *testing.T) {
+	s, _ := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/schema/status", nil)
+	w := httptest.NewRecorder()
+	s.handleSchemaStatus(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	// No config.yaml → schema_version defaults to 0.
+	if resp["schema_version"].(float64) != 0 {
+		t.Errorf("expected schema_version 0, got %v", resp["schema_version"])
+	}
+	// embeddedSchemaVersion is 0 (test default) → not outdated.
+	if resp["outdated"] != false {
+		t.Errorf("expected outdated false, got %v", resp["outdated"])
+	}
+}
+
+func TestSchemaStatus_OutdatedWhenConfigBehindEmbedded(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "index"), 0o755)
+	// Create server with embedded version 3.
+	s := NewServer(dir, 3)
+
+	// Write config with schema_version "1" (behind embedded 3).
+	os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("schema_version: \"1\"\n"), 0o644)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/schema/status", nil)
+	w := httptest.NewRecorder()
+	s.handleSchemaStatus(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp["schema_version"].(float64) != 1 {
+		t.Errorf("expected schema_version 1, got %v", resp["schema_version"])
+	}
+	if resp["outdated"] != true {
+		t.Errorf("expected outdated true when config < embedded, got %v", resp["outdated"])
+	}
+}
+
+func TestSchemaStatus_NotOutdatedWhenConfigMatchesEmbedded(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "index"), 0o755)
+	s := NewServer(dir, 2)
+
+	os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("schema_version: \"2\"\n"), 0o644)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/schema/status", nil)
+	w := httptest.NewRecorder()
+	s.handleSchemaStatus(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp["outdated"] != false {
+		t.Errorf("expected outdated false when config == embedded, got %v", resp["outdated"])
 	}
 }

@@ -228,8 +228,8 @@ func (s *Server) handleSchemaStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, map[string]interface{}{
 		"current_version": version.Version,
-		"schema_version":  cfg.SchemaVersion,
-		"outdated":        cfg.SchemaVersion != version.Version,
+		"schema_version":  cfg.SchemaVersionInt(),
+		"outdated":        cfg.SchemaVersionInt() < s.embeddedSchemaVersion,
 	})
 }
 
