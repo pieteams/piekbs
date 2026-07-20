@@ -306,9 +306,15 @@ func (s *Server) handleDistillRefreshOutdated(w http.ResponseWriter, r *http.Req
 		}
 		parsed := kb.ParseMarkdown(string(data))
 
-		// Get raw source path from frontmatter sources field.
-		if len(parsed.Sources) == 0 || parsed.Sources[0] == "" {
-			// No sources — orphan wiki file. Clean up.
+		// Check if this is an orphan wiki file (no sources or raw file missing).
+		isOrphan := len(parsed.Sources) == 0 || parsed.Sources[0] == ""
+		if !isOrphan {
+			rawAbsPath := filepath.Join(s.kbRoot, filepath.FromSlash(parsed.Sources[0]))
+			if _, statErr := os.Stat(rawAbsPath); os.IsNotExist(statErr) {
+				isOrphan = true
+			}
+		}
+		if isOrphan {
 			os.Remove(absPath)
 			if _, delErr := db.Exec("DELETE FROM documents WHERE id = ?", notePath); delErr != nil {
 				errs = append(errs, notePath+": delete doc error: "+delErr.Error())
@@ -318,16 +324,6 @@ func (s *Server) handleDistillRefreshOutdated(w http.ResponseWriter, r *http.Req
 		}
 		rawSource := parsed.Sources[0] // e.g. "raw/foo/bar.md"
 		rawAbsPath := filepath.Join(s.kbRoot, filepath.FromSlash(rawSource))
-
-		if _, statErr := os.Stat(rawAbsPath); os.IsNotExist(statErr) {
-			// Raw file gone — orphan wiki file. Clean up.
-			os.Remove(absPath)
-			if _, delErr := db.Exec("DELETE FROM documents WHERE id = ?", notePath); delErr != nil {
-				errs = append(errs, notePath+": delete doc error: "+delErr.Error())
-			}
-			cleaned++
-			continue
-		}
 
 		// Delete old wiki file, then enqueue raw for re-distill.
 		if removeErr := os.Remove(absPath); removeErr != nil {

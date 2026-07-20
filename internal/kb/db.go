@@ -101,6 +101,7 @@ func migrateDescription(db *sql.DB, kbRoot string) error {
 	hasDescription := false
 	hasAuthority := false
 	hasDocTimestamp := false
+	hasDistillVersion := false
 	for rows.Next() {
 		var cid int
 		var name, ctype string
@@ -118,6 +119,9 @@ func migrateDescription(db *sql.DB, kbRoot string) error {
 		}
 		if name == "doc_timestamp" {
 			hasDocTimestamp = true
+		}
+		if name == "distill_version" {
+			hasDistillVersion = true
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -140,28 +144,6 @@ func migrateDescription(db *sql.DB, kbRoot string) error {
 	}
 
 	// Migrate distill_version column.
-	hasDistillVersion := false
-	rows2, err := db.Query("PRAGMA table_info(documents)")
-	if err != nil {
-		return err
-	}
-	defer rows2.Close()
-	for rows2.Next() {
-		var cid int
-		var name, ctype string
-		var notnull int
-		var dflt interface{}
-		var pk int
-		if err := rows2.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
-			return err
-		}
-		if name == "distill_version" {
-			hasDistillVersion = true
-		}
-	}
-	if err := rows2.Err(); err != nil {
-		return err
-	}
 	if !hasDistillVersion {
 		if _, err := db.Exec("ALTER TABLE documents ADD COLUMN distill_version TEXT"); err != nil {
 			return err
