@@ -59,7 +59,7 @@ jobs:
           mkdir -p dist
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
             go build -tags fts5 \
-            -ldflags "-s -w -X main.Version=${{ steps.version.outputs.VERSION }}" \
+            -ldflags "-s -w -X github.com/pieteams/piekbs/internal/version.Version=${{ steps.version.outputs.VERSION }}" \
             -o dist/piekbs.exe ./cmd/piekbs/
           cd dist && zip -q piekbs-${{ steps.version.outputs.VERSION }}-windows-amd64.zip piekbs.exe && rm piekbs.exe
 

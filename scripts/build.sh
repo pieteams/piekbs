@@ -52,7 +52,7 @@ build_darwin_arm64() {
 
     CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 \
         go build -tags fts5 \
-        -ldflags "-s -w -X main.Version=${VERSION}" \
+        -ldflags "-s -w -X github.com/pieteams/piekbs/internal/version.Version=${VERSION}" \
         -o "$app_dir/Contents/MacOS/piekbs" \
         ./cmd/piekbs/
 
@@ -109,7 +109,7 @@ build_linux() {
 
     CGO_ENABLED=0 GOOS=linux GOARCH=$goarch \
         go build -tags fts5 \
-        -ldflags "-s -w -X main.Version=${VERSION}" \
+        -ldflags "-s -w -X github.com/pieteams/piekbs/internal/version.Version=${VERSION}" \
         -o "$bin" ./cmd/piekbs/
 
     local staging="$OUTDIR/.pkg-${suffix}"
@@ -131,7 +131,7 @@ build_windows_amd64() {
     # Pure Go build — modernc.org/sqlite works without CGO.
     CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
         go build -tags fts5 \
-        -ldflags "-s -w -X main.Version=${VERSION}" \
+        -ldflags "-s -w -X github.com/pieteams/piekbs/internal/version.Version=${VERSION}" \
         -o "$bin" ./cmd/piekbs/
 
     local staging="$OUTDIR/.pkg-windows-amd64"
