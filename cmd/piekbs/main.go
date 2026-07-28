@@ -104,7 +104,7 @@ func run() error {
 	case "import-lark":
 		return runImportLark(*kbRoot, args[1:])
 	case "schema":
-		if len(args) > 0 && args[0] == "upgrade" {
+		if isSchemaUpgrade(args) {
 			return runSchemaUpgrade(*kbRoot)
 		}
 		return fmt.Errorf("usage: piekbs schema upgrade")
@@ -113,6 +113,13 @@ func run() error {
 	default:
 		return fmt.Errorf("unknown subcommand: %s", sub)
 	}
+}
+
+// isSchemaUpgrade reports whether args selects `schema upgrade`.
+// args is the full subcommand list from flag.Args(), so args[0] is the
+// subcommand name itself ("schema") and the action lives at args[1].
+func isSchemaUpgrade(args []string) bool {
+	return len(args) > 1 && args[1] == "upgrade"
 }
 
 func runImportLark(kbRoot string, args []string) error {
