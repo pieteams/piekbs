@@ -53,6 +53,8 @@ type SearchResult struct {
 // minTrigramLen is the minimum token length for FTS5 trigram tokenizer.
 const minTrigramLen = 3
 
+const snippetWindow = 120
+
 // FTSSearch performs a full-text search over the documents table.
 // query supports comma-separated keywords: "Go, Python" → per-keyword search.
 // layer optionally filters results to a specific layer (raw/wiki/schema).
@@ -178,7 +180,7 @@ SELECT
     COALESCE(d.kind, '') AS kind,
     COALESCE(d.title, '') AS title,
     COALESCE(d.description, '') AS description,
-    snippet(document_fts, 2, '[', ']', '...', 10) AS snippet,
+    d.content,
     CASE d.layer WHEN 'wiki' THEN 1.0 ELSE 0.0 END AS wiki_priority,
     COALESCE(d.authority, 3) AS authority,
     rank AS fts_rank,
@@ -190,7 +192,73 @@ WHERE document_fts MATCH ?
 ORDER BY wiki_priority DESC, rank
 LIMIT ?`
 
-	return scanResults(db, sqlStr, args...)
+	return scanFTSResults(db, sqlStr, ftsQuery, args...)
+}
+
+// snippetFor returns a bounded excerpt around the first query keyword match.
+func snippetFor(content, query string) string {
+	return snippetForKeywords(content, splitKeywords(query))
+}
+
+func snippetForKeywords(content string, keywords []string) string {
+	content = strings.TrimSpace(ParseMarkdown(content).Content)
+	content = strings.Join(strings.Fields(content), " ")
+	if content == "" {
+		return ""
+	}
+	lower := strings.ToLower(content)
+	matchAt, matchLen := -1, 0
+	for _, keyword := range keywords {
+		keywordLower := strings.ToLower(keyword)
+		if at := strings.Index(lower, keywordLower); at >= 0 && (matchAt < 0 || at < matchAt) {
+			matchAt, matchLen = at, len(keyword)
+		}
+	}
+	if matchAt < 0 {
+		return content
+	}
+	start := matchAt - snippetWindow/2
+	if start < 0 {
+		start = 0
+	}
+	end := matchAt + matchLen + snippetWindow/2
+	if end > len(content) {
+		end = len(content)
+	}
+	for start > 0 && content[start] != ' ' {
+		start++
+	}
+	for end < len(content) && content[end] != ' ' {
+		end++
+	}
+	local := matchAt - start
+	result := content[start:local+start] + "[" + content[local+start:local+start+matchLen] + "]" + content[local+start+matchLen:end]
+	if start > 0 {
+		result = "..." + result
+	}
+	if end < len(content) {
+		result += "..."
+	}
+	return result
+}
+
+func scanFTSResults(db *sql.DB, sqlStr, query string, args ...interface{}) ([]SearchResult, error) {
+	rows, err := db.Query(sqlStr, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []SearchResult
+	for rows.Next() {
+		var r SearchResult
+		var content string
+		if err := rows.Scan(&r.ID, &r.Path, &r.Layer, &r.Kind, &r.Title, &r.Description, &content, &r.WikiPriority, &r.Authority, &r.FTSRank, &r.DocTimestamp); err != nil {
+			return nil, err
+		}
+		r.Snippet = snippetFor(content, query)
+		results = append(results, r)
+	}
+	return results, rows.Err()
 }
 
 // likeSearch performs LIKE-based fallback search for short keywords (< 3 chars).
@@ -380,7 +448,7 @@ func multiKindFTS(db *sql.DB, query string, layer, kind *string, limit int) ([]S
 
 	// RRF merge across all lists.
 	type entry struct {
-		r    SearchResult
+		r     SearchResult
 		score float64
 	}
 	merged := make(map[string]*entry)
@@ -598,4 +666,3 @@ func mergeRelated(a, b []RelatedDoc, maxTotal int) []RelatedDoc {
 	}
 	return out
 }
-

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -115,6 +116,28 @@ func TestSearchLayeredSeparatesKinds(t *testing.T) {
 	}
 	if synthCount > 3 {
 		t.Errorf("synthesized pages should be capped at 3, got %d", synthCount)
+	}
+}
+
+func TestSnippetForTrimsFrontmatterAndWhitespace(t *testing.T) {
+	content := "---\ntitle: noisy\nkind: source-note\n---\nline one\n\tTRAE appears here"
+	got := snippetFor(content, "TRAE")
+	if strings.Contains(got, "title: noisy") || strings.Contains(got, "\n") || strings.Contains(got, "\t") {
+		t.Fatalf("snippet contains frontmatter or whitespace: %q", got)
+	}
+	if !strings.Contains(got, "[TRAE]") {
+		t.Fatalf("snippet should mark the match: %q", got)
+	}
+}
+
+func TestSnippetForHighFrequencyMatchIsBounded(t *testing.T) {
+	content := strings.Repeat("TRAE ", 10000) + "tail"
+	got := snippetFor(content, "TRAE")
+	if len(got) > snippetWindow+10 {
+		t.Fatalf("snippet length = %d, want bounded near %d: %q", len(got), snippetWindow, got)
+	}
+	if !strings.Contains(got, "[TRAE]") {
+		t.Fatalf("snippet should mark the first match: %q", got)
 	}
 }
 
