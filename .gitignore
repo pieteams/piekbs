@@ -28,7 +28,6 @@ build/
 /piekbs
 /piekbs.exe
 *.log
-piekbs
 
 # Local env
 .env
