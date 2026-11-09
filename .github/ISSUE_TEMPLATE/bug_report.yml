@@ -23,6 +23,7 @@ body:
         - macOS (Apple Silicon)
         - Linux x86_64
         - Linux ARM64
+        - Windows x86_64
     validations:
       required: true
 

@@ -1,4 +1,4 @@
-name: Deploy Docs
+name: Docs
 
 on:
   push:
@@ -6,6 +6,10 @@ on:
     paths:
       - 'docs/site/**'
       - '.github/workflows/docs.yml'
+  # No path filter on pull requests: a path-filtered workflow does not run on
+  # unmatched PRs, so the required check would stay "Expected" forever.
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -14,11 +18,11 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  build:
+  docs-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,21 +39,23 @@ jobs:
 
       - name: Install dependencies
         working-directory: docs/site
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         working-directory: docs/site
         run: pnpm docs:build
 
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
         with:
           path: docs/site/.vitepress/dist
 
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    needs: build
+    needs: docs-build
     runs-on: ubuntu-latest
     steps:
       - id: deployment
