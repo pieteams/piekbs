@@ -6,6 +6,7 @@ package convert
 
 import (
 	"archive/zip"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -17,6 +18,17 @@ import (
 // imgPlaceholderRe matches base64-encoded image placeholders in converted
 // documents (e.g. embedded Excel sheets inside docx/pptx).
 var imgPlaceholderRe = regexp.MustCompile(`!\[.*?\]\(data:image/[^)]+\)`)
+
+const stagingPrefix = ".piekbs-convert-"
+
+// IsStagingPath identifies unpublished output directories under raw/converted.
+func IsStagingPath(kbRoot, path string) bool {
+	if !strings.HasPrefix(filepath.Base(path), stagingPrefix) {
+		return false
+	}
+	rel, err := filepath.Rel(kbRoot, path)
+	return err == nil && strings.HasPrefix(filepath.ToSlash(rel), "raw/converted/")
+}
 
 // FindConvertibleFiles walks the raw/ directory under kbRoot and returns
 // paths of files that need conversion (have a supported extension and
@@ -53,7 +65,7 @@ func FindConvertibleFiles(kbRoot string, registry *Registry) []string {
 		// Check if a converted version already exists
 		rel, _ := filepath.Rel(rawDir, path)
 		convertedPath := filepath.Join(convertedDir, strings.TrimSuffix(rel, filepath.Ext(rel))+".md")
-		if _, err := os.Stat(convertedPath); err == nil {
+		if info, err := os.Stat(convertedPath); err == nil && info.Mode().IsRegular() {
 			return nil
 		}
 
@@ -65,24 +77,21 @@ func FindConvertibleFiles(kbRoot string, registry *Registry) []string {
 }
 
 // ConvertFile converts srcPath to markdown at destPath using the registry.
-// Returns true on success, false on failure.
-func ConvertFile(registry *Registry, srcPath, destPath string) bool {
-	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
-		fmt.Fprintf(os.Stderr, "convert: mkdir failed for %s: %v\n", destPath, err)
-		return false
+func ConvertFile(registry *Registry, srcPath, destPath string) error {
+	outputDir := filepath.Dir(destPath)
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		return fmt.Errorf("create output directory: %w", err)
 	}
 
 	ext := strings.ToLower(filepath.Ext(srcPath))
 	parser, ok := registry.Get(ext)
 	if !ok {
-		fmt.Fprintf(os.Stderr, "convert: no parser for %s\n", ext)
-		return false
+		return fmt.Errorf("no parser for %s", ext)
 	}
 
 	text, err := parser.Extract(srcPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "convert: failed to convert %s: %v\n", srcPath, err)
-		return false
+		return fmt.Errorf("extract: %w", err)
 	}
 
 	// Embedded Excel handling: DOCX/PPTX may contain embedded XLSX
@@ -90,15 +99,25 @@ func ConvertFile(registry *Registry, srcPath, destPath string) bool {
 		text = injectEmbeddedXlsx(registry, srcPath, text)
 	}
 
-	if err := os.WriteFile(destPath, []byte(text), 0o644); err != nil {
-		fmt.Fprintf(os.Stderr, "convert: write failed for %s: %v\n", destPath, err)
-		return false
+	// Publish completed output atomically so a failed write cannot look converted.
+	staging, err := os.MkdirTemp(outputDir, stagingPrefix)
+	if err != nil {
+		return fmt.Errorf("stage output: %w", err)
 	}
-	return true
+	defer os.Remove(staging)
+	output := filepath.Join(staging, "content")
+	defer os.Remove(output)
+	if err := os.WriteFile(output, []byte(text), 0o644); err != nil {
+		return fmt.Errorf("write output: %w", err)
+	}
+	if err := os.Rename(output, destPath); err != nil {
+		return fmt.Errorf("publish output: %w", err)
+	}
+	return nil
 }
 
 // Run finds convertible files under kbRoot and converts them using pure Go parsers.
-// Returns the number of files converted. Failures are non-fatal.
+// Returns the number converted and any per-file errors after attempting the batch.
 func Run(kbRoot string) (int, error) {
 	registry := NewRegistry()
 	files := FindConvertibleFiles(kbRoot, registry)
@@ -110,17 +129,20 @@ func Run(kbRoot string) (int, error) {
 	rawDir := filepath.Join(kbRoot, "raw")
 	convertedDir := filepath.Join(rawDir, "converted")
 	converted := 0
+	var failures []error
 	for _, src := range files {
 		rel, _ := filepath.Rel(rawDir, src)
 		dest := filepath.Join(convertedDir, strings.TrimSuffix(rel, filepath.Ext(rel))+".md")
 		log.Printf("convert: converting %s → %s", src, dest)
-		if ConvertFile(registry, src, dest) {
-			converted++
-			log.Printf("convert: done (%d/%d)", converted, len(files))
+		if err := ConvertFile(registry, src, dest); err != nil {
+			failures = append(failures, fmt.Errorf("convert %s: %w", rel, err))
+			continue
 		}
+		converted++
+		log.Printf("convert: done (%d/%d)", converted, len(files))
 	}
 
-	return converted, nil
+	return converted, errors.Join(failures...)
 }
 
 // injectEmbeddedXlsx extracts embedded .xlsx files from a docx/pptx (which are zip

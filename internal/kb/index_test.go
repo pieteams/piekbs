@@ -46,6 +46,41 @@ func TestUpsertDocument_New(t *testing.T) {
 	}
 }
 
+func TestIndexFilesSkipsConversionStaging(t *testing.T) {
+	dir := setupTestKB(t)
+	db, err := OpenDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	converted := filepath.Join(dir, "raw", "converted")
+	staging := filepath.Join(converted, ".piekbs-convert-test")
+	if err := os.Mkdir(staging, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(staging, "partial.md"), []byte("# UnpublishedConversion"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(converted, "ready.md"), []byte("# PublishedConversion"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	written, err := IndexFiles(db, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if written != 1 {
+		t.Fatalf("indexed %d files, want only the published conversion", written)
+	}
+	hits, err := FTSSearch(db, "PublishedConversion", nil, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) != 1 || hits[0].ID != "raw/converted/ready.md" {
+		t.Fatalf("unexpected search results: %v", hits)
+	}
+}
+
 func TestIndexFiles_TabularFiles(t *testing.T) {
 	dir := setupTestKB(t)
 	db, err := OpenDB(dir)

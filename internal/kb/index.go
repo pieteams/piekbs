@@ -13,6 +13,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/pieteams/piekbs/internal/convert"
 )
 
 var textExtensions = map[string]bool{".md": true, ".txt": true, ".rst": true, ".tsv": true, ".csv": true}
@@ -58,6 +60,14 @@ func indexFiles(db *sql.DB, kbRoot string, force bool) (int, error) {
 	written := 0
 
 	err := filepath.Walk(kbRoot, func(path string, info os.FileInfo, err error) error {
+		if convert.IsStagingPath(kbRoot, path) {
+			if info != nil && info.IsDir() {
+				return filepath.SkipDir
+			}
+			if os.IsNotExist(err) {
+				return nil
+			}
+		}
 		if err != nil || info.IsDir() {
 			return err
 		}
