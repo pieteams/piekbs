@@ -396,16 +396,19 @@ func buildFTSAndQuery(keywords []string) string { return buildFTSExpr(keywords, 
 // k=60 is the standard value from the original RRF paper (Cormack et al., 2009).
 const rrfK = 60.0
 
-// multiKindFTS runs FTS queries for each wiki kind in parallel and merges via RRF.
-// This gives each kind (source-note, concept, comparison, decision) an equal chance
-// to surface top results, preventing high-volume kinds from drowning out others.
+// multiKindFTS runs additional FTS queries for each wiki kind when the layer
+// filter includes wiki. RRF then merges those results with the general query
+// so high-volume kinds do not drown out others.
 // When kind is non-nil, falls back to a single FTSSearchFiltered call.
 func multiKindFTS(db *sql.DB, query string, layer, kind *string, limit int) ([]SearchResult, error) {
 	if kind != nil {
 		return FTSSearchFiltered(db, query, layer, kind, limit)
 	}
 	wikiLayer := "wiki"
-	kinds := []string{"source-note", "concept", "comparison", "decision"}
+	var kinds []string
+	if layer == nil || *layer == wikiLayer {
+		kinds = []string{"source-note", "concept", "comparison", "decision"}
+	}
 
 	type kindResult struct {
 		results []SearchResult
@@ -427,7 +430,7 @@ func multiKindFTS(db *sql.DB, query string, layer, kind *string, limit int) ([]S
 		}()
 	}
 
-	// Also run an unrestricted FTS to catch raw-layer and unclassified docs.
+	// Search the requested scope regardless of document kind.
 	go func() {
 		res, err := FTSSearchFiltered(db, query, layer, nil, limit*3)
 		ch <- kindResult{res, err}
