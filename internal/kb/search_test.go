@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -116,6 +117,61 @@ func TestSearchLayeredSeparatesKinds(t *testing.T) {
 	}
 	if synthCount > 3 {
 		t.Errorf("synthesized pages should be capped at 3, got %d", synthCount)
+	}
+}
+
+func TestSearchLayeredHonorsLayerFilter(t *testing.T) {
+	dir := setupTestKB(t)
+	db, err := OpenDB(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	docs := map[string]string{
+		"raw/retrieval.md":               "# Retrieval source",
+		"schema/retrieval.md":            "# Retrieval template",
+		"wiki/concepts/retrieval.md":     "---\ntype: concept\n---\n# Retrieval concept",
+		"wiki/source-notes/retrieval.md": "---\ntype: source-note\n---\n# Retrieval note",
+	}
+	for id, content := range docs {
+		path := filepath.Join(dir, id)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := IndexFiles(db, dir); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name  string
+		layer *string
+		want  []string
+	}{
+		{"raw", strPtr("raw"), []string{"raw/retrieval.md"}},
+		{"schema", strPtr("schema"), []string{"schema/retrieval.md"}},
+		{"wiki", strPtr("wiki"), []string{"wiki/concepts/retrieval.md", "wiki/source-notes/retrieval.md"}},
+		{"all layers", nil, []string{"raw/retrieval.md", "schema/retrieval.md", "wiki/concepts/retrieval.md", "wiki/source-notes/retrieval.md"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			results, _, err := SearchLayered(db, dir, "retrieval", tt.layer, nil, 5, 3)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ids := make([]string, 0, len(results))
+			for _, result := range results {
+				ids = append(ids, result.ID)
+			}
+			slices.Sort(ids)
+			if !slices.Equal(ids, tt.want) {
+				t.Errorf("got result IDs %v, want %v", ids, tt.want)
+			}
+		})
 	}
 }
 
