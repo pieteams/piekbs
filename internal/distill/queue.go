@@ -4,36 +4,45 @@ package distill
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"path/filepath"
 	"time"
 )
 
 // Enqueue scans FindNewFiles and inserts not-yet-queued files into distill_queue.
 // Idempotent: existing paths are skipped via INSERT OR IGNORE.
-// Returns the number of newly inserted rows.
+// Returns the number of newly inserted rows and any per-file errors.
 func Enqueue(db *sql.DB, kbRoot string) (int, error) {
 	files := FindNewFiles(kbRoot)
+	rawDir := filepath.Join(kbRoot, "raw")
 	now := time.Now().Unix()
 	inserted := 0
+	var failures []error
 	for _, absPath := range files {
-		rawDir := filepath.Join(kbRoot, "raw")
 		rel, err := filepath.Rel(rawDir, absPath)
 		if err != nil {
+			failures = append(failures, fmt.Errorf("resolve path %s: %w", absPath, err))
 			continue
 		}
+		path := filepath.ToSlash(rel)
 		res, err := db.Exec(
 			`INSERT OR IGNORE INTO distill_queue (path, status, retry_count, queued_at, updated_at)
              VALUES (?, 'pending', 0, ?, ?)`,
-			filepath.ToSlash(rel), now, now,
+			path, now, now,
 		)
 		if err != nil {
+			failures = append(failures, fmt.Errorf("queue %s: %w", path, err))
 			continue
 		}
-		if n, _ := res.RowsAffected(); n > 0 {
-			inserted++
+		n, err := res.RowsAffected()
+		if err != nil {
+			failures = append(failures, fmt.Errorf("check queue insert for %s: %w", path, err))
+			continue
 		}
+		inserted += int(n)
 	}
-	return inserted, nil
+	return inserted, errors.Join(failures...)
 }
 
 // NextPending atomically fetches one pending task and sets it to processing.

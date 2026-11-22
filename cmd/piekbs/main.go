@@ -5,6 +5,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"html"
@@ -164,6 +165,7 @@ func runSchemaUpgrade(kbRoot string) error {
 const (
 	runningFile       = "index/.running"
 	lastShutdownFile  = "index/.last_shutdown"
+	catchUpPrefix     = ".catch_up_"
 	heartbeatInterval = time.Hour
 )
 
@@ -192,6 +194,43 @@ func lastKnownTime(kbRoot string) time.Time {
 		return t
 	}
 	return readTimestamp(filepath.Join(kbRoot, runningFile))
+}
+
+// beginCatchUp records the scan range before the startup timestamps change.
+// Each attempt owns a marker so a successful scan can clear its known work
+// without deleting markers created by other instances after it began.
+func beginCatchUp(kbRoot string) (time.Time, []string, error) {
+	since := lastKnownTime(kbRoot)
+	dir := filepath.Join(kbRoot, "index")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return time.Time{}, nil, err
+	}
+	var markers []string
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasPrefix(entry.Name(), catchUpPrefix) {
+			path := filepath.Join(dir, entry.Name())
+			markers = append(markers, path)
+			// An incomplete marker is read as zero and triggers a full scan.
+			if previous := readTimestamp(path); previous.Before(since) {
+				since = previous
+			}
+		}
+	}
+
+	marker, err := os.CreateTemp(dir, catchUpPrefix)
+	if err != nil {
+		return time.Time{}, nil, err
+	}
+	_, writeErr := fmt.Fprintln(marker, since.Unix())
+	closeErr := marker.Close()
+	if writeErr != nil {
+		return time.Time{}, nil, writeErr
+	}
+	if closeErr != nil {
+		return time.Time{}, nil, closeErr
+	}
+	return since, append(markers, marker.Name()), nil
 }
 
 // shutdown performs the graceful shutdown sequence: close DB, write
@@ -236,11 +275,27 @@ func startServices(kbRoot string, cfg *config.Config) (context.CancelFunc, error
 		return nil, fmt.Errorf("initialize database: %w", err)
 	}
 
-	// Catch-up: index + distill files newer than last known time.
-	since := lastKnownTime(kbRoot)
-	if !since.IsZero() {
-		go func() { catchUpFn(kbRoot, since, cfg) }()
+	since, markers, err := beginCatchUp(kbRoot)
+	if err != nil {
+		return nil, fmt.Errorf("record catch-up checkpoint: %w", err)
 	}
+	writeTimestamp(filepath.Join(kbRoot, runningFile))
+	_ = os.Remove(filepath.Join(kbRoot, lastShutdownFile))
+	startHeartbeat(kbRoot)
+	startSignalHandler(kbRoot)
+
+	go func() {
+		if err := catchUpFn(kbRoot, since, cfg); err != nil {
+			log.Printf("catch-up: %v", err)
+			// The newest marker already covers the previous scan ranges.
+			markers = markers[:len(markers)-1]
+		}
+		for _, path := range markers {
+			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+				log.Printf("catch-up: remove checkpoint: %v", err)
+			}
+		}
+	}()
 
 	// File watcher in background.
 	go func() {
@@ -388,12 +443,6 @@ func runStdio(kbRoot string) error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	writeTimestamp(filepath.Join(kbRoot, runningFile))
-	_ = os.Remove(filepath.Join(kbRoot, lastShutdownFile))
-
-	startHeartbeat(kbRoot)
-	startSignalHandler(kbRoot)
-
 	cancelWorkers, err := startServices(kbRoot, cfg)
 	if err != nil {
 		return err
@@ -419,12 +468,6 @@ func runServe(kbRoot string) error {
 	if err := preflightCheck(kbRoot, cfg); err != nil {
 		return err
 	}
-
-	writeTimestamp(filepath.Join(kbRoot, runningFile))
-	_ = os.Remove(filepath.Join(kbRoot, lastShutdownFile))
-
-	startHeartbeat(kbRoot)
-	startSignalHandler(kbRoot)
 
 	cancelWorkers, err := startServices(kbRoot, cfg)
 	if err != nil {
@@ -481,58 +524,80 @@ func hasDisplay() bool {
 	return runtime.GOOS == "darwin"
 }
 
-// catchUpFn indexes and distills files in raw/ newer than since.
-func catchUpFn(kbRoot string, since time.Time, cfg *config.Config) {
+// catchUpFn indexes and queues files in raw/ that changed after since.
+func catchUpFn(kbRoot string, since time.Time, cfg *config.Config) error {
 	rawDir := filepath.Join(kbRoot, "raw")
 	var newFiles []string
-	_ = filepath.Walk(rawDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+	if err := filepath.Walk(rawDir, func(path string, info os.FileInfo, err error) error {
+		if convert.IsStagingPath(kbRoot, path) {
+			if info != nil && info.IsDir() {
+				return filepath.SkipDir
+			}
+			if os.IsNotExist(err) {
+				return nil
+			}
+		}
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
 			return nil
 		}
 		if info.ModTime().After(since) {
 			newFiles = append(newFiles, path)
 		}
 		return nil
-	})
+	}); err != nil {
+		return fmt.Errorf("scan raw files: %w", err)
+	}
 
 	if len(newFiles) == 0 {
-		return
+		return nil
 	}
 	log.Printf("catch-up: %d new file(s) since %s", len(newFiles), since.Format(time.RFC3339))
 
-	// Convert any non-md files first.
-	if n, _ := convert.Run(kbRoot); n > 0 {
-		log.Printf("catch-up convert: %d file(s) converted", n)
+	// Keep indexing available files even if some conversions fail.
+	converted, convertErr := convert.Run(kbRoot)
+	if converted > 0 {
+		log.Printf("catch-up convert: %d file(s) converted", converted)
+	}
+	if convertErr != nil {
+		convertErr = fmt.Errorf("convert files: %w", convertErr)
 	}
 
 	db, err := kb.GlobalDB(kbRoot)
 	if err != nil {
-		log.Printf("catch-up: open db: %v", err)
-		return
+		return errors.Join(convertErr, fmt.Errorf("open db: %w", err))
 	}
 
 	n, err := kb.IndexFiles(db, kbRoot)
 	if err != nil {
-		log.Printf("catch-up: reindex: %v", err)
-		return
+		return errors.Join(convertErr, fmt.Errorf("reindex: %w", err))
 	}
 	log.Printf("catch-up: %d files indexed", n)
 
 	if cfg.Distill.IsConfigured() {
-		if eq, eqErr := distill.Enqueue(db, kbRoot); eqErr != nil {
-			log.Printf("catch-up enqueue: %v", eqErr)
-		} else if eq > 0 {
-			log.Printf("catch-up enqueue: %d file(s) queued for distillation", eq)
+		queued, queueErr := distill.Enqueue(db, kbRoot)
+		if queued > 0 {
+			log.Printf("catch-up enqueue: %d file(s) queued for distillation", queued)
+		}
+		if queueErr != nil {
+			return errors.Join(convertErr, fmt.Errorf("enqueue: %w", queueErr))
 		}
 	}
+	return convertErr
 }
 
 // reindexFn is the callback used by the file watcher.
 // Order: convert → index → distill → post-distill reindex.
 func reindexFn(kbRoot string) {
 	// 1. Convert non-md files (docx, pdf, etc.) to markdown.
-	if n, _ := convert.Run(kbRoot); n > 0 {
-		log.Printf("watcher convert: %d file(s) converted", n)
+	converted, convertErr := convert.Run(kbRoot)
+	if converted > 0 {
+		log.Printf("watcher convert: %d file(s) converted", converted)
+	}
+	if convertErr != nil {
+		log.Printf("watcher convert: %v", convertErr)
 	}
 
 	// 2. Index all text files into FTS.
