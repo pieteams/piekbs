@@ -4,6 +4,7 @@ package synthesize
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -449,7 +450,7 @@ func runIncrementalWithNotes(cfg Config, kbRoot, notePath string, allNotes []Sou
 	for _, p := range plans {
 		if err := AppendOrCreate(cfg, kbRoot, p); err != nil {
 			// Log but don't abort — incremental synthesize is best-effort.
-			fmt.Printf("synthesize incremental: %s/%s: %v\n", p.Type, p.Slug, err)
+			log.Printf("synthesize incremental: %s/%s: %v", p.Type, p.Slug, err)
 		}
 	}
 	return nil

@@ -7,6 +7,7 @@ package convert
 import (
 	"archive/zip"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -102,7 +103,7 @@ func Run(kbRoot string) (int, error) {
 	registry := NewRegistry()
 	files := FindConvertibleFiles(kbRoot, registry)
 	if len(files) == 0 {
-		fmt.Println("convert: no files to convert")
+		log.Print("convert: no files to convert")
 		return 0, nil
 	}
 
@@ -112,10 +113,10 @@ func Run(kbRoot string) (int, error) {
 	for _, src := range files {
 		rel, _ := filepath.Rel(rawDir, src)
 		dest := filepath.Join(convertedDir, strings.TrimSuffix(rel, filepath.Ext(rel))+".md")
-		fmt.Printf("convert: converting %s → %s\n", src, dest)
+		log.Printf("convert: converting %s → %s", src, dest)
 		if ConvertFile(registry, src, dest) {
 			converted++
-			fmt.Printf("convert: done (%d/%d)\n", converted, len(files))
+			log.Printf("convert: done (%d/%d)", converted, len(files))
 		}
 	}
 
