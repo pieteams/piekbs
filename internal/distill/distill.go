@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -610,7 +611,7 @@ func DistillFile(config Config, rawPath, kbRoot string, embedder kb.Embedder) er
 		}
 		rawDocID := "raw/" + filepath.ToSlash(rel)
 		generated = lightweightNote(rawPath, rawDocID, string(rawContent))
-		fmt.Printf("  [lightweight] %s\n", filepath.Base(rawPath))
+		log.Printf("distill: lightweight note for %s", filepath.Base(rawPath))
 	} else {
 		relatedContext := findRelatedNotes()
 		generated, err = CallLLM(config, kbRoot, string(rawContent), relatedContext)
@@ -665,7 +666,7 @@ func DistillFile(config Config, rawPath, kbRoot string, embedder kb.Embedder) er
 	synthCfg := config
 	noteRelPath := "wiki/source-notes/" + filepath.ToSlash(noteRel)
 	if err := synthesize.RunIncremental(synthCfg, kbRoot, noteRelPath); err != nil {
-		fmt.Printf("distill: incremental synthesize: %v\n", err)
+		log.Printf("distill: incremental synthesize: %v", err)
 	}
 	return nil
 }
